@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Validate inventory availability before proceeding (skip manual items)
     const inventoryChecks = [];
+    const inventoryWarnings = [];
     for (const item of items) {
       // Skip inventory checks for manual items
       if (item.product.upc.startsWith('MANUAL_')) {
@@ -58,9 +59,18 @@ export async function POST(req: NextRequest) {
       if (!product) {
         throw new Error(`Product ${item.product.upc} not found`);
       }
+
+      // Check inventory but DON'T block the sale - just log warning
       if (product.inventory < item.quantity) {
-        throw new Error(`Insufficient inventory for ${product.name}. Available: ${product.inventory}, Requested: ${item.quantity}`);
+        inventoryWarnings.push({
+          product: product.name,
+          available: product.inventory,
+          requested: item.quantity
+        });
+        console.log(`⚠️ OVERRIDE SALE: ${product.name} - Available: ${product.inventory}, Selling: ${item.quantity}`);
+        // Don't throw error - allow the sale to proceed
       }
+
       inventoryChecks.push({ product, requestedQty: item.quantity });
     }
 
@@ -136,14 +146,18 @@ export async function POST(req: NextRequest) {
       entityId: transaction._id.toString(),
       metadata: {
         transactionNumber,
-        reason: `${paymentMethod} transaction completed - Total: $${total.toFixed(2)}`
+        reason: `${paymentMethod} transaction completed - Total: $${total.toFixed(2)}`,
+        inventoryWarnings: inventoryWarnings.length > 0 ? inventoryWarnings : undefined
       },
-      severity: 'INFO',
+      severity: inventoryWarnings.length > 0 ? 'WARNING' : 'INFO',
       success: true,
       request: req
     });
 
-    return NextResponse.json(transaction, { status: 201 });
+    return NextResponse.json({
+      ...transaction.toObject(),
+      inventoryWarnings: inventoryWarnings.length > 0 ? inventoryWarnings : undefined
+    }, { status: 201 });
 
   } catch (error: any) {
     // Rollback transaction on error
