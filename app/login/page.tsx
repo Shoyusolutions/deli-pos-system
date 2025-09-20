@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -9,6 +10,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
+  const [showPasswordKeyboard, setShowPasswordKeyboard] = useState(false);
 
   // Check if already authenticated
   useEffect(() => {
@@ -109,36 +112,24 @@ export default function LoginPage() {
             <label className="block text-black mb-2" htmlFor="email">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-black placeholder-gray-500"
-              placeholder="Enter your email"
-              autoComplete="email"
-              maxLength={100}
-              required
-              disabled={loading}
-            />
+            <div
+              onClick={() => setShowEmailKeyboard(true)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+            >
+              {email || <span className="text-gray-400">Tap to enter your email</span>}
+            </div>
           </div>
 
           <div className="mb-6">
             <label className="block text-black mb-2" htmlFor="password">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-black placeholder-gray-500"
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              maxLength={100}
-              required
-              disabled={loading}
-            />
+            <div
+              onClick={() => setShowPasswordKeyboard(true)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+            >
+              {password ? '•'.repeat(password.length) : <span className="text-gray-400">Tap to enter your password</span>}
+            </div>
           </div>
 
           <button
@@ -151,6 +142,36 @@ export default function LoginPage() {
         </form>
 
       </div>
+
+      {/* On-Screen Keyboard for Email */}
+      {showEmailKeyboard && (
+        <OnScreenKeyboard
+          value={email}
+          onChange={setEmail}
+          onClose={() => setShowEmailKeyboard(false)}
+          onEnter={() => setShowEmailKeyboard(false)}
+          title="Enter Email"
+          type="email"
+        />
+      )}
+
+      {/* On-Screen Keyboard for Password */}
+      {showPasswordKeyboard && (
+        <OnScreenKeyboard
+          value={password}
+          onChange={setPassword}
+          onClose={() => setShowPasswordKeyboard(false)}
+          onEnter={() => {
+            setShowPasswordKeyboard(false);
+            // Auto-submit on enter if both fields are filled
+            if (email && password) {
+              handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+            }
+          }}
+          title="Enter Password"
+          type="password"
+        />
+      )}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Keyboard, Package, X, Plus, ShoppingCart } from 'lucide-react';
+import OnScreenNumpad from '@/components/OnScreenNumpad';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 interface Product {
   _id?: string;
@@ -24,6 +26,7 @@ export default function CheckoutPage() {
   const [paymentMode, setPaymentMode] = useState<'idle' | 'payment' | 'cash' | 'card' | 'success' | 'change'>('idle');
   const [cashGiven, setCashGiven] = useState('');
   const [changeAmount, setChangeAmount] = useState(0);
+  const [showCashNumpad, setShowCashNumpad] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [screenFlash, setScreenFlash] = useState(false);
   const [showCardConfirmation, setShowCardConfirmation] = useState(false);
@@ -47,6 +50,8 @@ export default function CheckoutPage() {
   const [showManualKeyIn, setShowManualKeyIn] = useState(false);
   const [manualItemName, setManualItemName] = useState('');
   const [manualItemPrice, setManualItemPrice] = useState('');
+  const [showManualNameKeyboard, setShowManualNameKeyboard] = useState(false);
+  const [showManualPriceNumpad, setShowManualPriceNumpad] = useState(false);
   const [lookingUpProduct, setLookingUpProduct] = useState(false);
   const [upcDatabaseProduct, setUpcDatabaseProduct] = useState<any>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -531,44 +536,13 @@ export default function CheckoutPage() {
   const handleCashPayment = () => {
     setPaymentMode('cash');
     setCashGiven('');
-  };
-
-  const handleNumpadClick = (value: string) => {
-    if (value === 'clear') {
-      setCashGiven('');
-    } else if (value === 'back') {
-      setCashGiven(prev => prev.slice(0, -1));
-    } else if (value === '.') {
-      if (!cashGiven.includes('.')) {
-        setCashGiven(prev => prev ? prev + '.' : '0.');
-      }
-    } else {
-      // Prevent more than 2 decimal places
-      if (cashGiven.includes('.')) {
-        const parts = cashGiven.split('.');
-        if (parts[1].length >= 2) return;
-      }
-      setCashGiven(prev => prev + value);
-    }
-  };
-
-  const handleQuickCash = (amount: number) => {
-    setCashGiven(amount.toFixed(2));
+    setShowCashNumpad(true);
   };
 
   const getCashDisplayAmount = () => {
     if (!cashGiven) return 0;
-
-    // If the input contains a decimal point, treat it as dollars
-    if (cashGiven.includes('.')) {
-      const amount = parseFloat(cashGiven);
-      return isNaN(amount) ? 0 : amount;
-    }
-
-    // If no decimal point, treat as cents and convert to dollars
-    const cents = parseInt(cashGiven);
-    if (isNaN(cents)) return 0;
-    return cents / 100;
+    const amount = parseFloat(cashGiven);
+    return isNaN(amount) ? 0 : amount;
   };
 
   const handleCardPayment = () => {
@@ -1093,56 +1067,78 @@ export default function CheckoutPage() {
               </button>
             </div>
             <p className="text-sm text-black mb-4">This will add a one-time item to the cart without saving it to the product database.</p>
-            <form onSubmit={(e) => {
-              handleManualKeyIn(e);
-              setNotFoundUpc(''); // Clear the not found UPC after adding manual item
-            }}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-black mb-1">Item Name *</label>
-                <input
-                  type="text"
-                  value={manualItemName}
-                  onChange={(e) => setManualItemName(e.target.value)}
-                  placeholder="Enter item name"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                  autoFocus
-                />
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">Item Name *</label>
+              <div
+                onClick={() => setShowManualNameKeyboard(true)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+              >
+                {manualItemName || <span className="text-gray-400">Tap to enter item name</span>}
               </div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-black mb-1">Price *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={manualItemPrice}
-                  onChange={(e) => setManualItemPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-black mb-1">Price *</label>
+              <div
+                onClick={() => setShowManualPriceNumpad(true)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+              >
+                {manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}
               </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium"
-                >
-                  Add to Cart
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowManualKeyIn(false);
-                    setManualItemName('');
-                    setManualItemPrice('');
-                  }}
-                  className="px-4 py-2.5 border border-gray-300 text-black rounded-lg hover:bg-gray-50"
-                >
-                  Back
-                </button>
-              </div>
-            </form>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (manualItemName && manualItemPrice) {
+                    handleManualKeyIn({ preventDefault: () => {} } as React.FormEvent);
+                    setNotFoundUpc('');
+                  }
+                }}
+                disabled={!manualItemName || !manualItemPrice}
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-400"
+              >
+                Add to Cart
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowManualKeyIn(false);
+                  setManualItemName('');
+                  setManualItemPrice('');
+                }}
+                className="px-4 py-2.5 border border-gray-300 text-black rounded-lg hover:bg-gray-50"
+              >
+                Back
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* On-Screen Keyboard for Manual Item Name */}
+      {showManualNameKeyboard && (
+        <OnScreenKeyboard
+          value={manualItemName}
+          onChange={setManualItemName}
+          onClose={() => setShowManualNameKeyboard(false)}
+          onEnter={() => setShowManualNameKeyboard(false)}
+          title="Enter Item Name"
+          type="text"
+        />
+      )}
+
+      {/* On-Screen Numpad for Manual Item Price */}
+      {showManualPriceNumpad && (
+        <OnScreenNumpad
+          value={manualItemPrice}
+          onChange={setManualItemPrice}
+          onClose={() => setShowManualPriceNumpad(false)}
+          onEnter={() => setShowManualPriceNumpad(false)}
+          decimal={true}
+          title="Enter Price"
+        />
       )}
 
       {/* Payment Method Selection Modal */}
@@ -1317,51 +1313,48 @@ export default function CheckoutPage() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <form onSubmit={handleManualKeyIn}>
-                  <div className="mb-3">
-                    <label className="block text-xs text-black mb-1">Item Name *</label>
-                    <input
-                      type="text"
-                      value={manualItemName}
-                      onChange={(e) => setManualItemName(e.target.value)}
-                      placeholder="Enter item name"
-                      className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required
-                      autoFocus
-                    />
+                <div className="mb-3">
+                  <label className="block text-xs text-black mb-1">Item Name *</label>
+                  <div
+                    onClick={() => setShowManualNameKeyboard(true)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    {manualItemName || <span className="text-gray-400">Tap to enter item name</span>}
                   </div>
-                  <div className="mb-3">
-                    <label className="block text-xs text-black mb-1">Price *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={manualItemPrice}
-                      onChange={(e) => setManualItemPrice(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      required
-                    />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-black mb-1">Price *</label>
+                  <div
+                    onClick={() => setShowManualPriceNumpad(true)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    {manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-green-600 text-white py-2 rounded text-sm hover:bg-green-700"
-                    >
-                      Add to Cart
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowManualKeyIn(false);
-                        setManualItemName('');
-                        setManualItemPrice('');
-                      }}
-                      className="px-4 py-2 text-black hover:text-black text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (manualItemName && manualItemPrice) {
+                        handleManualKeyIn({ preventDefault: () => {} } as React.FormEvent);
+                      }
+                    }}
+                    disabled={!manualItemName || !manualItemPrice}
+                    className="flex-1 bg-green-600 text-white py-2 rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    Add to Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowManualKeyIn(false);
+                      setManualItemName('');
+                      setManualItemPrice('');
+                    }}
+                    className="px-4 py-2 text-black hover:text-black text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1411,129 +1404,39 @@ export default function CheckoutPage() {
             )}
 
 
-            {paymentMode === 'cash' && (
-              <div className="fixed inset-0 bg-gray-200 bg-opacity-80 z-50">
-                <div className="h-full flex flex-col bg-white">
-                  {/* Header with Back and Complete buttons */}
-                  <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-                    <button
-                      onClick={() => {
-                        setPaymentMode('payment');
-                        setCashGiven('');
-                      }}
-                      className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 font-medium"
-                    >
-                      Back
-                    </button>
-                    <h2 className="text-xl font-bold text-black">Cash Payment</h2>
-                    <button
-                      onClick={handleCashSubmit}
-                      className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      disabled={!cashGiven || calculateChange() < 0}
-                    >
-                      Complete
-                    </button>
-                  </div>
-
-                  {/* Main content area */}
-                  <div className="flex-1 flex flex-col p-4 space-y-4">
-                    {/* Total and Cash Display */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-center">
-                          <p className="text-sm text-black mb-1">Total Due</p>
-                          <p className="text-3xl font-bold text-black">${getTotal('cash').toFixed(2)}</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <div className="text-center">
-                          <p className="text-sm text-black mb-1">
-                            Cash Tendered
-                            {cashGiven && calculateChange() < 0 && (
-                              <span className="text-red-600 ml-2">(Insufficient amount)</span>
-                            )}
-                          </p>
-                          <p className="text-3xl font-bold text-black">
-                            ${getCashDisplayAmount().toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Quick cash buttons */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-center text-black">Quick Amounts</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {(() => {
-                            const total = getTotal('cash');
-                            const suggestions = [];
-
-                            // Round up to nearest $5
-                            const nearest5 = Math.ceil(total / 5) * 5;
-                            if (nearest5 > total) suggestions.push(nearest5);
-
-                            // Round up to nearest $10
-                            const nearest10 = Math.ceil(total / 10) * 10;
-                            if (nearest10 > nearest5) suggestions.push(nearest10);
-
-                            // Round up to nearest $20
-                            const nearest20 = Math.ceil(total / 20) * 20;
-                            if (nearest20 > nearest10 && suggestions.length < 6) suggestions.push(nearest20);
-
-                            // Add common amounts
-                            const standardAmounts = [50, 100, 200];
-                            for (const amt of standardAmounts) {
-                              if (suggestions.length < 6 && amt > total && !suggestions.includes(amt)) {
-                                suggestions.push(amt);
-                              }
-                            }
-
-                            return suggestions.slice(0, 6).map(amount => (
-                              <button
-                                key={amount}
-                                onClick={() => handleQuickCash(amount)}
-                                className="py-4 px-4 bg-gray-100 text-black rounded-lg hover:bg-gray-200 text-lg font-medium"
-                              >
-                                ${amount}
-                              </button>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-
-                      {/* Numeric keypad */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-center text-black">Enter Amount</h3>
-                        <div className="grid grid-cols-3 gap-3">
-                          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'].map((key) => (
-                            <button
-                              key={key}
-                              onClick={() => handleNumpadClick(key)}
-                              className={`py-4 px-4 text-xl font-medium rounded-lg transition-colors ${
-                                key === 'back'
-                                  ? 'bg-gray-200 hover:bg-gray-300 text-black'
-                                  : 'bg-white border-2 border-gray-300 hover:bg-gray-50 text-black'
-                              }`}
-                            >
-                              {key === 'back' ? '⌫' : key}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Clear button */}
-                        <button
-                          onClick={() => handleNumpadClick('clear')}
-                          className="w-full py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* OnScreen Numpad for Cash Payment */}
+            {showCashNumpad && paymentMode === 'cash' && (
+              <OnScreenNumpad
+                value={cashGiven}
+                onChange={(value) => {
+                  setCashGiven(value);
+                  // Auto-submit if change is >= 0
+                  if (value) {
+                    const amount = parseFloat(value) || 0;
+                    if (amount >= getTotal('cash')) {
+                      // Don't auto-submit, let user confirm
+                    }
+                  }
+                }}
+                onClose={() => {
+                  setShowCashNumpad(false);
+                  setPaymentMode('payment');
+                  setCashGiven('');
+                }}
+                onEnter={() => {
+                  const amount = parseFloat(cashGiven) || 0;
+                  if (amount >= getTotal('cash')) {
+                    setShowCashNumpad(false);
+                    handleCashSubmit();
+                  } else {
+                    setMessage('Insufficient cash amount');
+                    setTimeout(() => setMessage(''), 3000);
+                  }
+                }}
+                decimal={true}
+                title={`Cash Payment - Total: $${getTotal('cash').toFixed(2)}`}
+                maxLength={10}
+              />
             )}
 
             {/* Cash Confirmation Modal */}

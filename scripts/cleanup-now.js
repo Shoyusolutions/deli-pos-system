@@ -93,7 +93,7 @@ async function cleanupNow() {
     console.log(`- Transaction Audit Logs: ${await AuditLog.countDocuments({ category: 'TRANSACTION' })} (should be 0)`);
 
     console.log('\n✅ Your POS system is ready for a fresh start!');
-    console.log('📝 Default login: owner@bedstuydeli.com / bedstuy123');
+    console.log('📝 Check .env.local for login credentials');
     console.log('🌐 URL: https://deli-pos-system.vercel.app');
 
   } catch (error) {

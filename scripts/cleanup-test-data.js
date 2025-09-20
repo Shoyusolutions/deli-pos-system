@@ -113,7 +113,7 @@ async function cleanupTestData() {
     console.log(`- Audit Logs (Transaction): ${await AuditLog.countDocuments({ category: 'TRANSACTION' })}`);
 
     console.log('\n✅ Your POS system is ready for a fresh start!');
-    console.log('📝 Default login: owner@bedstuydeli.com / bedstuy123');
+    console.log('📝 Check .env.local for login credentials');
 
   } catch (error) {
     console.error('❌ Error during cleanup:', error);

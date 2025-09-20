@@ -92,9 +92,10 @@ npm run seed:users
 npm run seed:store
 ```
 
-2. **Default Login Credentials**:
-- Email: `owner@bedstuydeli.com`
-- Password: `bedstuy123`
+2. **Login Credentials**:
+- Check your `.env.local` file for the default credentials
+- IMPORTANT: Change these in production!
+- Set `DEFAULT_OWNER_EMAIL` and `DEFAULT_OWNER_PASSWORD` environment variables in Vercel
 
 ### 7. Test Your Deployment
 

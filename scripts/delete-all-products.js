@@ -53,7 +53,7 @@ async function deleteAllProducts() {
 
     console.log('\n✅ Your POS system is completely empty!');
     console.log('📝 You can now add your real products through the Inventory page');
-    console.log('📝 Default login: owner@bedstuydeli.com / bedstuy123');
+    console.log('📝 Check .env.local for login credentials');
     console.log('🌐 URL: https://deli-pos-system.vercel.app');
 
   } catch (error) {

@@ -61,11 +61,12 @@ async function seedUsers() {
     }
 
     // Create store owner user
-    const ownerEmail = 'owner@bedstuydeli.com';
+    const ownerEmail = process.env.DEFAULT_OWNER_EMAIL || 'owner@defaultdeli.com';
+    const ownerPassword = process.env.DEFAULT_OWNER_PASSWORD || 'changethis123';
     let ownerUser = await User.findOne({ email: ownerEmail });
 
     if (!ownerUser) {
-      const hashedOwnerPassword = await bcrypt.hash('bedstuy123', 10);
+      const hashedOwnerPassword = await bcrypt.hash(ownerPassword, 10);
       ownerUser = new User({
         email: ownerEmail,
         password: hashedOwnerPassword,
@@ -82,11 +83,12 @@ async function seedUsers() {
     }
 
     // Create cashier user
-    const cashierEmail = 'cashier@bedstuydeli.com';
+    const cashierEmail = process.env.DEFAULT_CASHIER_EMAIL || 'cashier@defaultdeli.com';
+    const cashierPassword = process.env.DEFAULT_CASHIER_PASSWORD || 'changethis456';
     let cashierUser = await User.findOne({ email: cashierEmail });
 
     if (!cashierUser) {
-      const hashedCashierPassword = await bcrypt.hash('cashier123', 10);
+      const hashedCashierPassword = await bcrypt.hash(cashierPassword, 10);
       cashierUser = new User({
         email: cashierEmail,
         password: hashedCashierPassword,
@@ -105,13 +107,13 @@ async function seedUsers() {
     console.log('\n=== Login Credentials ===');
     console.log('Admin:');
     console.log('  Email: admin@delisystem.com');
-    console.log('  Password: admin123');
+    console.log('  Password: [Check .env.local]');
     console.log('\nStore Owner:');
-    console.log('  Email: owner@bedstuydeli.com');
-    console.log('  Password: bedstuy123');
+    console.log('  Email:', ownerEmail);
+    console.log('  Password: [Check .env.local for DEFAULT_OWNER_PASSWORD]');
     console.log('\nCashier:');
-    console.log('  Email: cashier@bedstuydeli.com');
-    console.log('  Password: cashier123');
+    console.log('  Email:', cashierEmail);
+    console.log('  Password: [Check .env.local for DEFAULT_CASHIER_PASSWORD]');
 
     process.exit(0);
   } catch (error) {

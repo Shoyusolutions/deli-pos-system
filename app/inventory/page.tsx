@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
+import OnScreenNumpad from '@/components/OnScreenNumpad';
 
 interface Product {
   _id?: string;
@@ -72,6 +74,13 @@ export default function InventoryPage() {
   const [editName, setEditName] = useState('');
   const [editCost, setEditCost] = useState('');
   const [manualUpc, setManualUpc] = useState('');
+
+  // On-screen keyboard states
+  const [showNameKeyboard, setShowNameKeyboard] = useState(false);
+  const [showPriceNumpad, setShowPriceNumpad] = useState(false);
+  const [showCostNumpad, setShowCostNumpad] = useState(false);
+  const [showQuantityNumpad, setShowQuantityNumpad] = useState(false);
+  const [activeInputField, setActiveInputField] = useState<'name' | 'price' | 'cost' | 'quantity' | null>(null);
 
   // Duplicate management states
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -2169,52 +2178,42 @@ export default function InventoryPage() {
                 <>
               <div className="mb-4">
                 <label className="block text-black mb-2">Product Name *</label>
-                <input
-                  ref={productNameInputRef}
-                  type="text"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      // Move to retail price field
-                      const priceInput = document.querySelector('input[placeholder="0.00"]') as HTMLInputElement;
-                      if (priceInput) {
-                        priceInput.focus();
-                      }
-                    }
+                <div
+                  onClick={() => {
+                    setActiveInputField('name');
+                    setShowNameKeyboard(true);
                   }}
-                  placeholder="Enter product name"
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder:text-black"
-                  required
-                />
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                >
+                  {productName || <span className="text-gray-400">Tap to enter product name</span>}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-black mb-2">Retail Price *</label>
-                  <input
-                    type="text"
-                    value={productPriceDisplay}
-                    onChange={(e) => handlePriceInput(e.target.value, setProductPrice, setProductPriceDisplay)}
-                    placeholder="0.00"
-                    className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder:text-gray-400"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter 100 for $1.00</p>
+                  <div
+                    onClick={() => {
+                      setActiveInputField('price');
+                      setShowPriceNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    {productPriceDisplay ? `$${productPriceDisplay}` : <span className="text-gray-400">Tap to enter price</span>}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-black mb-2">Cost *</label>
-                  <input
-                    type="text"
-                    value={productCostDisplay}
-                    onChange={(e) => handlePriceInput(e.target.value, setProductCost, setProductCostDisplay)}
-                    placeholder="0.00"
-                    className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder:text-gray-400"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter 100 for $1.00</p>
+                  <div
+                    onClick={() => {
+                      setActiveInputField('cost');
+                      setShowCostNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    {productCostDisplay ? `$${productCostDisplay}` : <span className="text-gray-400">Tap to enter cost</span>}
+                  </div>
                 </div>
               </div>
 
@@ -2289,13 +2288,15 @@ export default function InventoryPage() {
 
               <div className="mb-4">
                 <label className="block text-black mb-2">Initial Quantity</label>
-                <input
-                  type="number"
-                  value={quantityInput}
-                  onChange={(e) => setQuantityInput(e.target.value)}
-                  placeholder="0"
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder:text-black"
-                />
+                <div
+                  onClick={() => {
+                    setActiveInputField('quantity');
+                    setShowQuantityNumpad(true);
+                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                >
+                  {quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}
+                </div>
               </div>
 
               {productPrice && productCost && (
@@ -2322,6 +2323,84 @@ export default function InventoryPage() {
               </div>
             </>
           )}
+
+          {/* On-Screen Keyboard for Product Name */}
+          {showNameKeyboard && (
+        <OnScreenKeyboard
+          value={productName}
+          onChange={setProductName}
+          onClose={() => {
+            setShowNameKeyboard(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowNameKeyboard(false);
+            setActiveInputField(null);
+          }}
+          title="Enter Product Name"
+          type="text"
+        />
+      )}
+
+      {/* On-Screen Numpad for Price */}
+      {showPriceNumpad && (
+        <OnScreenNumpad
+          value={productPriceDisplay}
+          onChange={(value) => {
+            setProductPriceDisplay(value);
+            setProductPrice(value);
+          }}
+          onClose={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Retail Price"
+        />
+      )}
+
+      {/* On-Screen Numpad for Cost */}
+      {showCostNumpad && (
+        <OnScreenNumpad
+          value={productCostDisplay}
+          onChange={(value) => {
+            setProductCostDisplay(value);
+            setProductCost(value);
+          }}
+          onClose={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Cost"
+        />
+      )}
+
+      {/* On-Screen Numpad for Quantity */}
+      {showQuantityNumpad && (
+        <OnScreenNumpad
+          value={quantityInput}
+          onChange={setQuantityInput}
+          onClose={() => {
+            setShowQuantityNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowQuantityNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={false}
+          title="Enter Quantity"
+        />
+      )}
         </div>
       </div>
     );
