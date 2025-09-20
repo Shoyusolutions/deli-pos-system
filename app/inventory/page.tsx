@@ -524,8 +524,8 @@ export default function InventoryPage() {
           storeId,
           upc: upcInput,
           name: productName,
-          price: productPrice ? parseInt(productPrice) / 100 : 0,
-          cost: productCost ? parseInt(productCost) / 100 : 0,
+          price: productPrice ? parseFloat(productPrice) : 0,
+          cost: productCost ? parseFloat(productCost) : 0,
           supplierId: selectedSupplierId,
           supplierName: selectedSupplier.name,
           inventory: parseInt(quantityInput) || 0
