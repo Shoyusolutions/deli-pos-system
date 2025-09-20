@@ -115,8 +115,8 @@ export default function OnScreenNumpad({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 sm:p-6 md:p-8">
-      <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
+    <div className="fixed inset-0 flex items-end justify-center z-[9999] pointer-events-none">
+      <div className="bg-white rounded-t-2xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
           <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">{title}</h3>
