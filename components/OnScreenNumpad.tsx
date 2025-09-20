@@ -23,14 +23,19 @@ export default function OnScreenNumpad({
   maxLength = 10
 }: OnScreenNumpadProps) {
 
-  // Internal state to track raw cents value
+  // Internal state - for currency mode track cents, for integer mode track raw value
   const [rawValue, setRawValue] = useState(() => {
-    // Initialize from value prop if it exists
-    if (value) {
+    if (!value) return '';
+
+    if (decimal) {
+      // Currency mode - convert dollars to cents
       const numValue = parseFloat(value);
       if (!isNaN(numValue)) {
         return Math.round(numValue * 100).toString();
       }
+    } else {
+      // Integer mode - use value as-is
+      return value;
     }
     return '';
   });
@@ -39,12 +44,16 @@ export default function OnScreenNumpad({
   useEffect(() => {
     if (rawValue === '') {
       onChange('');
-    } else {
+    } else if (decimal) {
+      // Currency mode - convert cents to dollars
       const cents = parseInt(rawValue) || 0;
       const dollars = (cents / 100).toFixed(2);
       onChange(dollars);
+    } else {
+      // Integer mode - pass through as-is
+      onChange(rawValue);
     }
-  }, [rawValue, onChange]);
+  }, [rawValue, onChange, decimal]);
 
   const handleNumber = (num: string) => {
     if (num === '.') return; // Ignore decimal button - we handle it automatically
@@ -93,7 +102,7 @@ export default function OnScreenNumpad({
         {/* Display */}
         <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
           <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-            ${value || '0.00'}
+            {decimal ? `$${value || '0.00'}` : (value || '0')}
           </span>
         </div>
 

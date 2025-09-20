@@ -1424,15 +1424,15 @@ export default function InventoryPage() {
                   </div>
 
                   <label className="block text-black mb-2">How many?</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantityInput}
-                    onChange={(e) => setQuantityInput(e.target.value)}
-                    placeholder="Enter quantity"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder:text-black"
-                    required
-                  />
+                  <div
+                    onClick={() => {
+                      setActiveInputField('quantity');
+                      setShowQuantityNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
+                  </div>
                   {quantityInput && (
                     <p className="text-sm mt-2 font-medium">
                       {updateMode === 'add' ? (
@@ -2185,7 +2185,7 @@ export default function InventoryPage() {
                   }}
                   className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
                 >
-                  {productName || <span className="text-gray-400">Tap to enter product name</span>}
+                  <span className="text-black">{productName || <span className="text-gray-400">Tap to enter product name</span>}</span>
                 </div>
               </div>
 
@@ -2199,7 +2199,7 @@ export default function InventoryPage() {
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
                   >
-                    {productPriceDisplay ? `$${productPriceDisplay}` : <span className="text-gray-400">Tap to enter price</span>}
+                    <span className="text-black">{productPriceDisplay ? `$${productPriceDisplay}` : <span className="text-gray-400">Tap to enter price</span>}</span>
                   </div>
                 </div>
 
@@ -2212,7 +2212,7 @@ export default function InventoryPage() {
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
                   >
-                    {productCostDisplay ? `$${productCostDisplay}` : <span className="text-gray-400">Tap to enter cost</span>}
+                    <span className="text-black">{productCostDisplay ? `$${productCostDisplay}` : <span className="text-gray-400">Tap to enter cost</span>}</span>
                   </div>
                 </div>
               </div>
@@ -2295,7 +2295,7 @@ export default function InventoryPage() {
                   }}
                   className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
                 >
-                  {quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}
+                  <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
                 </div>
               </div>
 

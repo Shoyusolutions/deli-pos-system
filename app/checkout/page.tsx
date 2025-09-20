@@ -1074,7 +1074,7 @@ export default function CheckoutPage() {
                 onClick={() => setShowManualNameKeyboard(true)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
               >
-                {manualItemName || <span className="text-gray-400">Tap to enter item name</span>}
+                <span className="text-black">{manualItemName || <span className="text-gray-400">Tap to enter item name</span>}</span>
               </div>
             </div>
 
@@ -1084,7 +1084,7 @@ export default function CheckoutPage() {
                 onClick={() => setShowManualPriceNumpad(true)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
               >
-                {manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}
+                <span className="text-black">{manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}</span>
               </div>
             </div>
 
@@ -1319,7 +1319,7 @@ export default function CheckoutPage() {
                     onClick={() => setShowManualNameKeyboard(true)}
                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
                   >
-                    {manualItemName || <span className="text-gray-400">Tap to enter item name</span>}
+                    <span className="text-black">{manualItemName || <span className="text-gray-400">Tap to enter item name</span>}</span>
                   </div>
                 </div>
                 <div className="mb-3">
@@ -1328,7 +1328,7 @@ export default function CheckoutPage() {
                     onClick={() => setShowManualPriceNumpad(true)}
                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
                   >
-                    {manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}
+                    <span className="text-black">{manualItemPrice ? `$${manualItemPrice}` : <span className="text-gray-400">Tap to enter price</span>}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
