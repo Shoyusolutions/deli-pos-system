@@ -1167,6 +1167,7 @@ export default function InventoryPage() {
   // Update Stock
   if (mode === 'update') {
     return (
+      <>
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -1321,7 +1322,15 @@ export default function InventoryPage() {
                           setEditName(selectedProduct.name);
                           setEditCost(selectedProduct.cost ? selectedProduct.cost.toString() : '');
                         }}
-                        className="text-sm text-blue-600 hover:text-blue-700 underline"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditMode(true);
+                          setEditPrice(selectedProduct.price.toString());
+                          setEditName(selectedProduct.name);
+                          setEditCost(selectedProduct.cost ? selectedProduct.cost.toString() : '');
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-700 underline touch-manipulation"
                       >
                         Edit Product Details
                       </button>
@@ -1342,7 +1351,11 @@ export default function InventoryPage() {
                         <label className="block text-sm text-black mb-1">Product Name</label>
                         <div
                           onClick={() => setShowEditNameKeyboard(true)}
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            setShowEditNameKeyboard(true);
+                          }}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                         >
                           <span className="text-black">{editName || <span className="text-gray-400">Tap to edit name</span>}</span>
                         </div>
@@ -1352,7 +1365,11 @@ export default function InventoryPage() {
                           <label className="block text-sm text-black mb-1">Price</label>
                           <div
                             onClick={() => setShowEditPriceNumpad(true)}
-                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              setShowEditPriceNumpad(true);
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                           >
                             <span className="text-black">{editPrice ? `$${editPrice}` : <span className="text-gray-400">Tap to edit price</span>}</span>
                           </div>
@@ -1361,7 +1378,11 @@ export default function InventoryPage() {
                           <label className="block text-sm text-black mb-1">Cost</label>
                           <div
                             onClick={() => setShowEditCostNumpad(true)}
-                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              setShowEditCostNumpad(true);
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                           >
                             <span className="text-black">{editCost ? `$${editCost}` : <span className="text-gray-400">Tap to edit cost</span>}</span>
                           </div>
@@ -1431,7 +1452,12 @@ export default function InventoryPage() {
                       setActiveInputField('quantity');
                       setShowQuantityNumpad(true);
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      setActiveInputField('quantity');
+                      setShowQuantityNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                   >
                     <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
                   </div>
@@ -1465,6 +1491,59 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+
+      {/* Modals for Update Stock mode */}
+      {showQuantityNumpad && (
+        <OnScreenNumpad
+          value={quantityInput}
+          onChange={setQuantityInput}
+          onClose={() => {
+            setShowQuantityNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowQuantityNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={false}
+          title="Enter Quantity"
+        />
+      )}
+
+      {/* Edit Mode On-Screen Inputs */}
+      {showEditNameKeyboard && (
+        <OnScreenKeyboard
+          value={editName}
+          onChange={setEditName}
+          onClose={() => setShowEditNameKeyboard(false)}
+          onEnter={() => setShowEditNameKeyboard(false)}
+          title="Edit Product Name"
+          type="text"
+        />
+      )}
+
+      {showEditPriceNumpad && (
+        <OnScreenNumpad
+          value={editPrice}
+          onChange={setEditPrice}
+          onClose={() => setShowEditPriceNumpad(false)}
+          onEnter={() => setShowEditPriceNumpad(false)}
+          decimal={true}
+          title="Edit Retail Price"
+        />
+      )}
+
+      {showEditCostNumpad && (
+        <OnScreenNumpad
+          value={editCost}
+          onChange={setEditCost}
+          onClose={() => setShowEditCostNumpad(false)}
+          onEnter={() => setShowEditCostNumpad(false)}
+          decimal={true}
+          title="Edit Cost"
+        />
+      )}
+      </>
     );
   }
 
@@ -1915,6 +1994,7 @@ export default function InventoryPage() {
   // Add New Item
   if (mode === 'add') {
     return (
+      <>
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -2185,7 +2265,12 @@ export default function InventoryPage() {
                     setActiveInputField('name');
                     setShowNameKeyboard(true);
                   }}
-                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    setActiveInputField('name');
+                    setShowNameKeyboard(true);
+                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                 >
                   <span className="text-black">{productName || <span className="text-gray-400">Tap to enter product name</span>}</span>
                 </div>
@@ -2199,7 +2284,12 @@ export default function InventoryPage() {
                       setActiveInputField('price');
                       setShowPriceNumpad(true);
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      setActiveInputField('price');
+                      setShowPriceNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                   >
                     <span className="text-black">{productPriceDisplay ? `$${productPriceDisplay}` : <span className="text-gray-400">Tap to enter price</span>}</span>
                   </div>
@@ -2212,7 +2302,12 @@ export default function InventoryPage() {
                       setActiveInputField('cost');
                       setShowCostNumpad(true);
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      setActiveInputField('cost');
+                      setShowCostNumpad(true);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                   >
                     <span className="text-black">{productCostDisplay ? `$${productCostDisplay}` : <span className="text-gray-400">Tap to enter cost</span>}</span>
                   </div>
@@ -2250,25 +2345,41 @@ export default function InventoryPage() {
                     <div className="space-y-3">
                       <div
                         onClick={() => setShowSupplierNameKeyboard(true)}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setShowSupplierNameKeyboard(true);
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                       >
                         <span className="text-black">{newSupplierName || <span className="text-gray-400">Tap to enter supplier name</span>}</span>
                       </div>
                       <div
                         onClick={() => setShowSupplierContactKeyboard(true)}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setShowSupplierContactKeyboard(true);
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                       >
                         <span className="text-black">{newSupplierContact || <span className="text-gray-400">Tap to enter contact person</span>}</span>
                       </div>
                       <div
                         onClick={() => setShowSupplierPhoneKeyboard(true)}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setShowSupplierPhoneKeyboard(true);
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                       >
                         <span className="text-black">{newSupplierPhone || <span className="text-gray-400">Tap to enter phone number</span>}</span>
                       </div>
                       <div
                         onClick={() => setShowSupplierEmailKeyboard(true)}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setShowSupplierEmailKeyboard(true);
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                       >
                         <span className="text-black">{newSupplierEmail || <span className="text-gray-400">Tap to enter email</span>}</span>
                       </div>
@@ -2291,7 +2402,12 @@ export default function InventoryPage() {
                     setActiveInputField('quantity');
                     setShowQuantityNumpad(true);
                   }}
-                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    setActiveInputField('quantity');
+                    setShowQuantityNumpad(true);
+                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
                 >
                   <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
                 </div>
@@ -2322,8 +2438,12 @@ export default function InventoryPage() {
             </>
           )}
 
-          {/* Modals moved to root - disabled here */}
-          {false && showNameKeyboard && (
+          {/* All modals moved to root level - duplicate modals removed */}
+        </div>
+      </div>
+
+      {/* Modals for Add mode */}
+      {showNameKeyboard && (
         <OnScreenKeyboard
           value={productName}
           onChange={setProductName}
@@ -2340,161 +2460,46 @@ export default function InventoryPage() {
         />
       )}
 
-      {/* On-Screen Numpad for Price */}
       {showPriceNumpad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Retail Price</h3>
-              <button
-                onClick={() => {
-                  setShowPriceNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Display */}
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${productPriceDisplay || '0.00'}
-              </span>
-            </div>
-
-            {/* Simple decimal input */}
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productPriceDisplay}
-                onChange={(e) => {
-                  setProductPriceDisplay(e.target.value);
-                  setProductPrice(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowPriceNumpad(false);
-                    setActiveInputField(null);
-                  } else if (e.key === 'Escape') {
-                    setShowPriceNumpad(false);
-                    setActiveInputField(null);
-                  }
-                }}
-                placeholder="Enter price (e.g., 10.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => {
-                  setProductPriceDisplay('');
-                  setProductPrice('');
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowPriceNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={productPrice}
+          onChange={(value) => {
+            setProductPrice(value);
+            setProductPriceDisplay(value);
+          }}
+          onClose={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Retail Price"
+        />
       )}
 
-      {/* On-Screen Numpad for Cost */}
       {showCostNumpad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Cost</h3>
-              <button
-                onClick={() => {
-                  setShowCostNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Display */}
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${productCostDisplay || '0.00'}
-              </span>
-            </div>
-
-            {/* Simple decimal input */}
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productCostDisplay}
-                onChange={(e) => {
-                  setProductCostDisplay(e.target.value);
-                  setProductCost(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowCostNumpad(false);
-                    setActiveInputField(null);
-                  } else if (e.key === 'Escape') {
-                    setShowCostNumpad(false);
-                    setActiveInputField(null);
-                  }
-                }}
-                placeholder="Enter cost (e.g., 8.50)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => {
-                  setProductCostDisplay('');
-                  setProductCost('');
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowCostNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={productCost}
+          onChange={(value) => {
+            setProductCost(value);
+            setProductCostDisplay(value);
+          }}
+          onClose={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Cost"
+        />
       )}
 
-      {/* On-Screen Numpad for Quantity */}
       {showQuantityNumpad && (
         <OnScreenNumpad
           value={quantityInput}
@@ -2508,159 +2513,11 @@ export default function InventoryPage() {
             setActiveInputField(null);
           }}
           decimal={false}
-          title="Enter Quantity"
+          title="Enter Initial Quantity"
         />
       )}
 
-      {/* Edit Mode On-Screen Inputs */}
-      {showEditNameKeyboard && (
-        <OnScreenKeyboard
-          value={editName}
-          onChange={setEditName}
-          onClose={() => setShowEditNameKeyboard(false)}
-          onEnter={() => setShowEditNameKeyboard(false)}
-          title="Edit Product Name"
-          type="text"
-        />
-      )}
-
-      {showEditPriceNumpad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Price</h3>
-              <button
-                onClick={() => setShowEditPriceNumpad(false)}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Display */}
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${editPrice || '0.00'}
-              </span>
-            </div>
-
-            {/* Simple decimal input */}
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowEditPriceNumpad(false);
-                  } else if (e.key === 'Escape') {
-                    setShowEditPriceNumpad(false);
-                  }
-                }}
-                placeholder="Enter price (e.g., 10.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setEditPrice('')}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-
-              <button
-                onClick={() => setShowEditPriceNumpad(false)}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditCostNumpad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Cost</h3>
-              <button
-                onClick={() => setShowEditCostNumpad(false)}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Display */}
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${editCost || '0.00'}
-              </span>
-            </div>
-
-            {/* Simple decimal input */}
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editCost}
-                onChange={(e) => setEditCost(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowEditCostNumpad(false);
-                  } else if (e.key === 'Escape') {
-                    setShowEditCostNumpad(false);
-                  }
-                }}
-                placeholder="Enter cost (e.g., 8.50)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setEditCost('')}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-
-              <button
-                onClick={() => setShowEditCostNumpad(false)}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Search Field On-Screen Input */}
-      {showSearchKeyboard && (
-        <OnScreenKeyboard
-          value={searchTerm}
-          onChange={setSearchTerm}
-          onClose={() => setShowSearchKeyboard(false)}
-          onEnter={() => setShowSearchKeyboard(false)}
-          title="Search Products"
-          type="text"
-        />
-      )}
-
-      {/* Supplier Fields On-Screen Inputs */}
+      {/* Supplier Field Keyboards */}
       {showSupplierNameKeyboard && (
         <OnScreenKeyboard
           value={newSupplierName}
@@ -2704,8 +2561,7 @@ export default function InventoryPage() {
           type="email"
         />
       )}
-        </div>
-      </div>
+      </>
     );
   }
 
@@ -2732,140 +2588,44 @@ export default function InventoryPage() {
 
       {/* On-Screen Numpad for Price */}
       {showPriceNumpad && (
-        <div className="fixed inset-0 flex items-end justify-center z-[99999] pointer-events-none p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-t-2xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Retail Price</h3>
-              <button
-                onClick={() => {
-                  setShowPriceNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${productPriceDisplay || '0.00'}
-              </span>
-            </div>
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productPriceDisplay}
-                onChange={(e) => {
-                  setProductPriceDisplay(e.target.value);
-                  setProductPrice(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowPriceNumpad(false);
-                    setActiveInputField(null);
-                  } else if (e.key === 'Escape') {
-                    setShowPriceNumpad(false);
-                    setActiveInputField(null);
-                  }
-                }}
-                placeholder="Enter price (e.g., 10.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => {
-                  setProductPriceDisplay('');
-                  setProductPrice('');
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => {
-                  setShowPriceNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={productPrice}
+          onChange={(value) => {
+            setProductPrice(value);
+            setProductPriceDisplay(value);
+          }}
+          onClose={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowPriceNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Retail Price"
+        />
       )}
 
       {/* On-Screen Numpad for Cost */}
       {showCostNumpad && (
-        <div className="fixed inset-0 flex items-end justify-center z-[99999] pointer-events-none p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-t-2xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Cost</h3>
-              <button
-                onClick={() => {
-                  setShowCostNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${productCostDisplay || '0.00'}
-              </span>
-            </div>
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productCostDisplay}
-                onChange={(e) => {
-                  setProductCostDisplay(e.target.value);
-                  setProductCost(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setShowCostNumpad(false);
-                    setActiveInputField(null);
-                  } else if (e.key === 'Escape') {
-                    setShowCostNumpad(false);
-                    setActiveInputField(null);
-                  }
-                }}
-                placeholder="Enter cost (e.g., 5.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => {
-                  setProductCostDisplay('');
-                  setProductCost('');
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => {
-                  setShowCostNumpad(false);
-                  setActiveInputField(null);
-                }}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={productCost}
+          onChange={(value) => {
+            setProductCost(value);
+            setProductCostDisplay(value);
+          }}
+          onClose={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowCostNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={true}
+          title="Enter Cost"
+        />
       )}
 
       {/* On-Screen Numpad for Quantity */}
@@ -2899,108 +2659,27 @@ export default function InventoryPage() {
       )}
 
       {showEditPriceNumpad && (
-        <div className="fixed inset-0 flex items-center justify-center z-[99999] pointer-events-none p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Price</h3>
-              <button
-                onClick={() => setShowEditPriceNumpad(false)}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${editPrice || '0.00'}
-              </span>
-            </div>
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    setShowEditPriceNumpad(false);
-                  }
-                }}
-                placeholder="Enter price (e.g., 10.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setEditPrice('')}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setShowEditPriceNumpad(false)}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={editPrice}
+          onChange={setEditPrice}
+          onClose={() => setShowEditPriceNumpad(false)}
+          onEnter={() => setShowEditPriceNumpad(false)}
+          decimal={true}
+          title="Edit Retail Price"
+        />
       )}
 
       {showEditCostNumpad && (
-        <div className="fixed inset-0 flex items-center justify-center z-[99999] pointer-events-none p-4 sm:p-6 md:p-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
-            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Cost</h3>
-              <button
-                onClick={() => setShowEditCostNumpad(false)}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-              </button>
-            </div>
-            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-                ${editCost || '0.00'}
-              </span>
-            </div>
-            <div className="mb-4">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editCost}
-                onChange={(e) => setEditCost(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    setShowEditCostNumpad(false);
-                  }
-                }}
-                placeholder="Enter cost (e.g., 5.99)"
-                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setEditCost('')}
-                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setShowEditCostNumpad(false)}
-                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <OnScreenNumpad
+          value={editCost}
+          onChange={setEditCost}
+          onClose={() => setShowEditCostNumpad(false)}
+          onEnter={() => setShowEditCostNumpad(false)}
+          decimal={true}
+          title="Edit Cost"
+        />
       )}
+
 
       {/* Search field on-screen input */}
       {showSearchKeyboard && (
