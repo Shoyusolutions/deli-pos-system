@@ -40,6 +40,25 @@ input, textarea, select {
   min-height: 100vh;
   /* Fallback for browsers that don't support dvh */
   min-height: 100dvh;
+  /* Support for devices with safe areas (notches, etc.) */
+  min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
+/* Full screen web app support */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    /* iOS specific height calculation for fullscreen web apps */
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Safe area padding for notched devices */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Ensure touch targets are at least 44px for accessibility */

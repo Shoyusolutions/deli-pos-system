@@ -1809,11 +1809,6 @@ export default function CheckoutPage() {
                           </div>
                           <p className="text-xs text-black">
                             UPC: {item.product.upc}
-                            {item.product.inventory !== undefined && (
-                              <span className={`ml-2 ${hasInventoryIssue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-                                (Stock: {item.product.inventory})
-                              </span>
-                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 mr-3">
