@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, DollarSign, Receipt, Shield, Database } from 'lucide-react';
+import OnScreenNumpad from '@/components/OnScreenNumpad';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -12,6 +14,12 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('pricing');
+  // On-screen input states
+  const [showTaxRateNumpad, setShowTaxRateNumpad] = useState(false);
+  const [showCashDiscountNumpad, setShowCashDiscountNumpad] = useState(false);
+  const [showTaxNameKeyboard, setShowTaxNameKeyboard] = useState(false);
+  const [showReceiptHeaderKeyboard, setShowReceiptHeaderKeyboard] = useState(false);
+  const [showReceiptFooterKeyboard, setShowReceiptFooterKeyboard] = useState(false);
 
   useEffect(() => {
     const savedStoreId = localStorage.getItem('selectedStoreId');
@@ -197,30 +205,26 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-black mb-1">
                           Tax Name
                         </label>
-                        <input
-                          type="text"
-                          value={settings.taxName}
-                          onChange={(e) => setSettings({ ...settings, taxName: e.target.value })}
-                          placeholder="e.g., Sales Tax, VAT"
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder-gray-500"
-                        />
+                        <div
+                          onClick={() => setShowTaxNameKeyboard(true)}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        >
+                          <span className="text-black">{settings.taxName || <span className="text-gray-400">Tap to enter tax name</span>}</span>
+                        </div>
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-black mb-1">
                           Tax Rate (%)
                         </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="30"
-                          value={settings.taxRate}
-                          onChange={(e) => setSettings({ ...settings, taxRate: parseFloat(e.target.value) })}
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder-gray-500"
-                        />
+                        <div
+                          onClick={() => setShowTaxRateNumpad(true)}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        >
+                          <span className="text-black">{settings.taxRate ? `${settings.taxRate}%` : <span className="text-gray-400">Tap to enter tax rate</span>}</span>
+                        </div>
                         <p className="text-xs text-black mt-1">
-                          Enter percentage (e.g., 8.5 for 8.5%)
+                          Tap to enter percentage (e.g., 8.5 for 8.5%)
                         </p>
                       </div>
                     </>
@@ -250,15 +254,12 @@ export default function SettingsPage() {
                       <label className="block text-sm font-medium text-black mb-1">
                         Card Processing Fee (%)
                       </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="10"
-                        value={settings.cashDiscountRate}
-                        onChange={(e) => setSettings({ ...settings, cashDiscountRate: parseFloat(e.target.value) })}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder-gray-500"
-                      />
+                      <div
+                        onClick={() => setShowCashDiscountNumpad(true)}
+                        className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      >
+                        <span className="text-black">{settings.cashDiscountRate ? `${settings.cashDiscountRate}%` : <span className="text-gray-400">Tap to enter discount rate</span>}</span>
+                      </div>
                       <p className="text-xs text-black mt-1">
                         Credit card prices will be {settings.cashDiscountRate}% higher than cash prices
                       </p>
@@ -277,26 +278,24 @@ export default function SettingsPage() {
                 <label className="block text-sm font-medium text-black mb-1">
                   Receipt Header
                 </label>
-                <textarea
-                  value={settings.receiptHeader || ''}
-                  onChange={(e) => setSettings({ ...settings, receiptHeader: e.target.value })}
-                  placeholder="e.g., Thank you for shopping at..."
-                  rows={3}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder-gray-500"
-                />
+                <div
+                  onClick={() => setShowReceiptHeaderKeyboard(true)}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 min-h-[4rem]"
+                >
+                  <span className="text-black">{settings.receiptHeader || <span className="text-gray-400">Tap to enter receipt header</span>}</span>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-black mb-1">
                   Receipt Footer
                 </label>
-                <textarea
-                  value={settings.receiptFooter || ''}
-                  onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
-                  placeholder="e.g., Have a great day!"
-                  rows={3}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder-gray-500"
-                />
+                <div
+                  onClick={() => setShowReceiptFooterKeyboard(true)}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 min-h-[4rem]"
+                >
+                  <span className="text-black">{settings.receiptFooter || <span className="text-gray-400">Tap to enter receipt footer</span>}</span>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -338,6 +337,68 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* On-Screen Inputs */}
+      {showTaxRateNumpad && (
+        <OnScreenNumpad
+          value={settings.taxRate ? settings.taxRate.toString() : ''}
+          onChange={(value) => {
+            const numValue = parseFloat(value) || 0;
+            setSettings({ ...settings, taxRate: numValue });
+          }}
+          onClose={() => setShowTaxRateNumpad(false)}
+          onEnter={() => setShowTaxRateNumpad(false)}
+          decimal={true}
+          title="Enter Tax Rate (%)"
+        />
+      )}
+
+      {showCashDiscountNumpad && (
+        <OnScreenNumpad
+          value={settings.cashDiscountRate ? settings.cashDiscountRate.toString() : ''}
+          onChange={(value) => {
+            const numValue = parseFloat(value) || 0;
+            setSettings({ ...settings, cashDiscountRate: numValue });
+          }}
+          onClose={() => setShowCashDiscountNumpad(false)}
+          onEnter={() => setShowCashDiscountNumpad(false)}
+          decimal={true}
+          title="Enter Cash Discount Rate (%)"
+        />
+      )}
+
+      {showTaxNameKeyboard && (
+        <OnScreenKeyboard
+          value={settings.taxName || ''}
+          onChange={(value) => setSettings({ ...settings, taxName: value })}
+          onClose={() => setShowTaxNameKeyboard(false)}
+          onEnter={() => setShowTaxNameKeyboard(false)}
+          title="Enter Tax Name"
+          type="text"
+        />
+      )}
+
+      {showReceiptHeaderKeyboard && (
+        <OnScreenKeyboard
+          value={settings.receiptHeader || ''}
+          onChange={(value) => setSettings({ ...settings, receiptHeader: value })}
+          onClose={() => setShowReceiptHeaderKeyboard(false)}
+          onEnter={() => setShowReceiptHeaderKeyboard(false)}
+          title="Enter Receipt Header"
+          type="text"
+        />
+      )}
+
+      {showReceiptFooterKeyboard && (
+        <OnScreenKeyboard
+          value={settings.receiptFooter || ''}
+          onChange={(value) => setSettings({ ...settings, receiptFooter: value })}
+          onClose={() => setShowReceiptFooterKeyboard(false)}
+          onEnter={() => setShowReceiptFooterKeyboard(false)}
+          title="Enter Receipt Footer"
+          type="text"
+        />
+      )}
     </div>
   );
 }

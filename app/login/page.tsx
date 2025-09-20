@@ -114,13 +114,24 @@ export default function LoginPage() {
             <label className="block text-black mb-2" htmlFor="email">
               Email
             </label>
-            <div
-              onClick={() => setShowEmailKeyboard(true)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
-            >
-              <span className="text-black">
-                {email || <span className="text-gray-400">Tap to enter your email</span>}
-              </span>
+            <div className="relative">
+              <div
+                onClick={() => setShowEmailKeyboard(true)}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+              >
+                <span className="text-black">
+                  {email || <span className="text-gray-400">Tap to enter your email or use keyboard</span>}
+                </span>
+              </div>
+              {/* Hidden input for keyboard support */}
+              <input
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setShowEmailKeyboard(true)}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                placeholder=""
+              />
             </div>
           </div>
 
@@ -129,13 +140,24 @@ export default function LoginPage() {
               Password
             </label>
             <div className="relative">
-              <div
-                onClick={() => setShowPasswordKeyboard(true)}
-                className="w-full p-3 pr-12 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
-              >
-                <span className="text-black">
-                  {password ? (showPassword ? password : '•'.repeat(password.length)) : <span className="text-gray-400">Tap to enter your password</span>}
-                </span>
+              <div className="relative">
+                <div
+                  onClick={() => setShowPasswordKeyboard(true)}
+                  className="w-full p-3 pr-12 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                >
+                  <span className="text-black">
+                    {password ? (showPassword ? password : '•'.repeat(password.length)) : <span className="text-gray-400">Tap to enter your password or use keyboard</span>}
+                  </span>
+                </div>
+                {/* Hidden input for keyboard support */}
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setShowPasswordKeyboard(true)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  placeholder=""
+                />
               </div>
               {password && (
                 <button

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 
@@ -81,6 +82,17 @@ export default function InventoryPage() {
   const [showCostNumpad, setShowCostNumpad] = useState(false);
   const [showQuantityNumpad, setShowQuantityNumpad] = useState(false);
   const [activeInputField, setActiveInputField] = useState<'name' | 'price' | 'cost' | 'quantity' | null>(null);
+  // Edit mode on-screen inputs
+  const [showEditNameKeyboard, setShowEditNameKeyboard] = useState(false);
+  const [showEditPriceNumpad, setShowEditPriceNumpad] = useState(false);
+  const [showEditCostNumpad, setShowEditCostNumpad] = useState(false);
+  // Search field on-screen input
+  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
+  // Supplier fields on-screen inputs
+  const [showSupplierNameKeyboard, setShowSupplierNameKeyboard] = useState(false);
+  const [showSupplierContactKeyboard, setShowSupplierContactKeyboard] = useState(false);
+  const [showSupplierPhoneKeyboard, setShowSupplierPhoneKeyboard] = useState(false);
+  const [showSupplierEmailKeyboard, setShowSupplierEmailKeyboard] = useState(false);
 
   // Duplicate management states
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -1039,17 +1051,12 @@ export default function InventoryPage() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search by name or UPC (or scan a barcode)..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setNotFoundUpc(''); // Clear not found when typing
-              }}
-              className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder:text-black"
-            />
+            <div
+              onClick={() => setShowSearchKeyboard(true)}
+              className="w-full p-3 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+            >
+              <span className="text-black">{searchTerm || <span className="text-gray-400">Tap to search by name or UPC</span>}</span>
+            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-md overflow-x-auto">
@@ -1333,36 +1340,31 @@ export default function InventoryPage() {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-black mb-1">Product Name</label>
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          placeholder={selectedProduct.name}
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder:text-black"
-                        />
+                        <div
+                          onClick={() => setShowEditNameKeyboard(true)}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                        >
+                          <span className="text-black">{editName || <span className="text-gray-400">Tap to edit name</span>}</span>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm text-black mb-1">Price</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editPrice}
-                            onChange={(e) => setEditPrice(e.target.value)}
-                            placeholder={selectedProduct.price.toFixed(2)}
-                            className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder:text-black"
-                          />
+                          <div
+                            onClick={() => setShowEditPriceNumpad(true)}
+                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                          >
+                            <span className="text-black">{editPrice ? `$${editPrice}` : <span className="text-gray-400">Tap to edit price</span>}</span>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-sm text-black mb-1">Cost</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editCost}
-                            onChange={(e) => setEditCost(e.target.value)}
-                            placeholder={selectedProduct.cost ? selectedProduct.cost.toFixed(2) : 'N/A'}
-                            className="w-full p-2 border border-gray-300 rounded-lg text-black placeholder:text-black"
-                          />
+                          <div
+                            onClick={() => setShowEditCostNumpad(true)}
+                            className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                          >
+                            <span className="text-black">{editCost ? `$${editCost}` : <span className="text-gray-400">Tap to edit cost</span>}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4">
@@ -2246,34 +2248,30 @@ export default function InventoryPage() {
                   <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
                     <h4 className="font-semibold mb-3 text-black">Add New Supplier</h4>
                     <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={newSupplierName}
-                        onChange={(e) => setNewSupplierName(e.target.value)}
-                        placeholder="Supplier name *"
-                        className="w-full p-2 border border-gray-300 rounded text-black placeholder:text-black"
-                      />
-                      <input
-                        type="text"
-                        value={newSupplierContact}
-                        onChange={(e) => setNewSupplierContact(e.target.value)}
-                        placeholder="Contact person (optional)"
-                        className="w-full p-2 border border-gray-300 rounded text-black placeholder:text-black"
-                      />
-                      <input
-                        type="tel"
-                        value={newSupplierPhone}
-                        onChange={(e) => setNewSupplierPhone(e.target.value)}
-                        placeholder="Phone number (optional)"
-                        className="w-full p-2 border border-gray-300 rounded text-black placeholder:text-black"
-                      />
-                      <input
-                        type="email"
-                        value={newSupplierEmail}
-                        onChange={(e) => setNewSupplierEmail(e.target.value)}
-                        placeholder="Email (optional)"
-                        className="w-full p-2 border border-gray-300 rounded text-black placeholder:text-black"
-                      />
+                      <div
+                        onClick={() => setShowSupplierNameKeyboard(true)}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      >
+                        <span className="text-black">{newSupplierName || <span className="text-gray-400">Tap to enter supplier name</span>}</span>
+                      </div>
+                      <div
+                        onClick={() => setShowSupplierContactKeyboard(true)}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      >
+                        <span className="text-black">{newSupplierContact || <span className="text-gray-400">Tap to enter contact person</span>}</span>
+                      </div>
+                      <div
+                        onClick={() => setShowSupplierPhoneKeyboard(true)}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      >
+                        <span className="text-black">{newSupplierPhone || <span className="text-gray-400">Tap to enter phone number</span>}</span>
+                      </div>
+                      <div
+                        onClick={() => setShowSupplierEmailKeyboard(true)}
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      >
+                        <span className="text-black">{newSupplierEmail || <span className="text-gray-400">Tap to enter email</span>}</span>
+                      </div>
                       <button
                         type="button"
                         onClick={handleAddSupplier}
@@ -2344,44 +2342,156 @@ export default function InventoryPage() {
 
       {/* On-Screen Numpad for Price */}
       {showPriceNumpad && (
-        <OnScreenNumpad
-          value={productPriceDisplay}
-          onChange={(value) => {
-            setProductPriceDisplay(value);
-            setProductPrice(value);
-          }}
-          onClose={() => {
-            setShowPriceNumpad(false);
-            setActiveInputField(null);
-          }}
-          onEnter={() => {
-            setShowPriceNumpad(false);
-            setActiveInputField(null);
-          }}
-          decimal={true}
-          title="Enter Retail Price"
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
+          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Retail Price</h3>
+              <button
+                onClick={() => {
+                  setShowPriceNumpad(false);
+                  setActiveInputField(null);
+                }}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Display */}
+            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
+                ${productPriceDisplay || '0.00'}
+              </span>
+            </div>
+
+            {/* Simple decimal input */}
+            <div className="mb-4">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={productPriceDisplay}
+                onChange={(e) => {
+                  setProductPriceDisplay(e.target.value);
+                  setProductPrice(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowPriceNumpad(false);
+                    setActiveInputField(null);
+                  } else if (e.key === 'Escape') {
+                    setShowPriceNumpad(false);
+                    setActiveInputField(null);
+                  }
+                }}
+                placeholder="Enter price (e.g., 10.99)"
+                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <button
+                onClick={() => {
+                  setProductPriceDisplay('');
+                  setProductPrice('');
+                }}
+                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowPriceNumpad(false);
+                  setActiveInputField(null);
+                }}
+                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* On-Screen Numpad for Cost */}
       {showCostNumpad && (
-        <OnScreenNumpad
-          value={productCostDisplay}
-          onChange={(value) => {
-            setProductCostDisplay(value);
-            setProductCost(value);
-          }}
-          onClose={() => {
-            setShowCostNumpad(false);
-            setActiveInputField(null);
-          }}
-          onEnter={() => {
-            setShowCostNumpad(false);
-            setActiveInputField(null);
-          }}
-          decimal={true}
-          title="Enter Cost"
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
+          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Enter Cost</h3>
+              <button
+                onClick={() => {
+                  setShowCostNumpad(false);
+                  setActiveInputField(null);
+                }}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Display */}
+            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
+                ${productCostDisplay || '0.00'}
+              </span>
+            </div>
+
+            {/* Simple decimal input */}
+            <div className="mb-4">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={productCostDisplay}
+                onChange={(e) => {
+                  setProductCostDisplay(e.target.value);
+                  setProductCost(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowCostNumpad(false);
+                    setActiveInputField(null);
+                  } else if (e.key === 'Escape') {
+                    setShowCostNumpad(false);
+                    setActiveInputField(null);
+                  }
+                }}
+                placeholder="Enter cost (e.g., 8.50)"
+                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <button
+                onClick={() => {
+                  setProductCostDisplay('');
+                  setProductCost('');
+                }}
+                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowCostNumpad(false);
+                  setActiveInputField(null);
+                }}
+                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* On-Screen Numpad for Quantity */}
@@ -2399,6 +2509,199 @@ export default function InventoryPage() {
           }}
           decimal={false}
           title="Enter Quantity"
+        />
+      )}
+
+      {/* Edit Mode On-Screen Inputs */}
+      {showEditNameKeyboard && (
+        <OnScreenKeyboard
+          value={editName}
+          onChange={setEditName}
+          onClose={() => setShowEditNameKeyboard(false)}
+          onEnter={() => setShowEditNameKeyboard(false)}
+          title="Edit Product Name"
+          type="text"
+        />
+      )}
+
+      {showEditPriceNumpad && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
+          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Price</h3>
+              <button
+                onClick={() => setShowEditPriceNumpad(false)}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Display */}
+            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
+                ${editPrice || '0.00'}
+              </span>
+            </div>
+
+            {/* Simple decimal input */}
+            <div className="mb-4">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowEditPriceNumpad(false);
+                  } else if (e.key === 'Escape') {
+                    setShowEditPriceNumpad(false);
+                  }
+                }}
+                placeholder="Enter price (e.g., 10.99)"
+                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <button
+                onClick={() => setEditPrice('')}
+                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => setShowEditPriceNumpad(false)}
+                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditCostNumpad && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 sm:p-6 md:p-8">
+          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">Edit Cost</h3>
+              <button
+                onClick={() => setShowEditCostNumpad(false)}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Display */}
+            <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
+              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
+                ${editCost || '0.00'}
+              </span>
+            </div>
+
+            {/* Simple decimal input */}
+            <div className="mb-4">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editCost}
+                onChange={(e) => setEditCost(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowEditCostNumpad(false);
+                  } else if (e.key === 'Escape') {
+                    setShowEditCostNumpad(false);
+                  }
+                }}
+                placeholder="Enter cost (e.g., 8.50)"
+                className="w-full p-3 border border-gray-300 rounded-lg text-black text-center text-xl"
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <button
+                onClick={() => setEditCost('')}
+                className="h-12 sm:h-14 md:h-16 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Clear
+              </button>
+
+              <button
+                onClick={() => setShowEditCostNumpad(false)}
+                className="h-12 sm:h-14 md:h-16 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95 text-sm sm:text-base md:text-lg"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search Field On-Screen Input */}
+      {showSearchKeyboard && (
+        <OnScreenKeyboard
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClose={() => setShowSearchKeyboard(false)}
+          onEnter={() => setShowSearchKeyboard(false)}
+          title="Search Products"
+          type="text"
+        />
+      )}
+
+      {/* Supplier Fields On-Screen Inputs */}
+      {showSupplierNameKeyboard && (
+        <OnScreenKeyboard
+          value={newSupplierName}
+          onChange={setNewSupplierName}
+          onClose={() => setShowSupplierNameKeyboard(false)}
+          onEnter={() => setShowSupplierNameKeyboard(false)}
+          title="Enter Supplier Name"
+          type="text"
+        />
+      )}
+
+      {showSupplierContactKeyboard && (
+        <OnScreenKeyboard
+          value={newSupplierContact}
+          onChange={setNewSupplierContact}
+          onClose={() => setShowSupplierContactKeyboard(false)}
+          onEnter={() => setShowSupplierContactKeyboard(false)}
+          title="Enter Contact Person"
+          type="text"
+        />
+      )}
+
+      {showSupplierPhoneKeyboard && (
+        <OnScreenKeyboard
+          value={newSupplierPhone}
+          onChange={setNewSupplierPhone}
+          onClose={() => setShowSupplierPhoneKeyboard(false)}
+          onEnter={() => setShowSupplierPhoneKeyboard(false)}
+          title="Enter Phone Number"
+          type="text"
+        />
+      )}
+
+      {showSupplierEmailKeyboard && (
+        <OnScreenKeyboard
+          value={newSupplierEmail}
+          onChange={setNewSupplierEmail}
+          onClose={() => setShowSupplierEmailKeyboard(false)}
+          onEnter={() => setShowSupplierEmailKeyboard(false)}
+          title="Enter Email"
+          type="email"
         />
       )}
         </div>

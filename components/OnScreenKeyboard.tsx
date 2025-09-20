@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Delete, Space, ChevronUp, Eye, EyeOff } from 'lucide-react';
 
 interface OnScreenKeyboardProps {
@@ -26,6 +26,37 @@ export default function OnScreenKeyboard({
   const [isCaps, setIsCaps] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Physical keyboard support
+  useEffect(() => {
+    const handlePhysicalKeyboard = (e: KeyboardEvent) => {
+      // Prevent default for most keys to avoid browser behavior
+      if (e.key !== 'Tab' && e.key !== 'F5' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+      }
+
+      if (e.key === 'Enter') {
+        handleEnter();
+      } else if (e.key === 'Escape') {
+        if (onClose) onClose();
+      } else if (e.key === 'Backspace') {
+        handleKey('backspace');
+      } else if (e.key === ' ') {
+        handleKey('space');
+      } else if (e.key.length === 1) {
+        // Single character keys (letters, numbers, symbols)
+        handleKey(e.key.toLowerCase());
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handlePhysicalKeyboard);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handlePhysicalKeyboard);
+    };
+  }, [value, maxLength, isShift, isCaps, type]); // Dependencies for handleKey
+
   // Keyboard layouts
   const row1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
   const row2 = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'];
@@ -49,7 +80,9 @@ export default function OnScreenKeyboard({
     } else if (key === '.' && type === 'email') {
       newValue = value + '.';
     } else {
-      newValue = value + (shouldCapitalize ? key.toUpperCase() : key);
+      // Handle both physical keyboard input and on-screen keyboard
+      const charToAdd = shouldCapitalize ? key.toUpperCase() : key;
+      newValue = value + charToAdd;
     }
 
     onChange(newValue);
@@ -81,7 +114,7 @@ export default function OnScreenKeyboard({
   const displayValue = type === 'password' && !showPassword ? '•'.repeat(value.length) : value;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[9999]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[99999]">
       <div className="bg-white rounded-t-2xl shadow-2xl p-2 sm:p-3 md:p-4 w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[75vh] sm:max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-2 sm:mb-3 pb-1 sm:pb-2 border-b">

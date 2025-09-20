@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
+import OnScreenNumpad from '@/components/OnScreenNumpad';
 
 interface Store {
   _id: string;
@@ -22,6 +24,15 @@ export default function StoresPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false); // Admin check - for now always false
+  // On-screen input states
+  const [showNameKeyboard, setShowNameKeyboard] = useState(false);
+  const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
+  const [showPhoneKeyboard, setShowPhoneKeyboard] = useState(false);
+  const [showTaxRateNumpad, setShowTaxRateNumpad] = useState(false);
+  const [showAddressKeyboard, setShowAddressKeyboard] = useState(false);
+  const [showCityKeyboard, setShowCityKeyboard] = useState(false);
+  const [showStateKeyboard, setShowStateKeyboard] = useState(false);
+  const [showZipKeyboard, setShowZipKeyboard] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -167,95 +178,75 @@ export default function StoresPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-black mb-2">Deli Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowNameKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.name || <span className="text-gray-400">Tap to enter deli name</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">Email *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowEmailKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.email || <span className="text-gray-400">Tap to enter email</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">Phone *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowPhoneKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.phone || <span className="text-gray-400">Tap to enter phone</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">Tax Rate (decimal)</label>
-                  <input
-                    type="number"
-                    name="taxRate"
-                    value={formData.taxRate}
-                    onChange={handleChange}
-                    step="0.001"
-                    min="0"
-                    max="0.20"
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                  />
+                  <div
+                    onClick={() => setShowTaxRateNumpad(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.taxRate || <span className="text-gray-400">Tap to enter tax rate</span>}</span>
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-black mb-2">Address *</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowAddressKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.address || <span className="text-gray-400">Tap to enter address</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">City *</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowCityKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.city || <span className="text-gray-400">Tap to enter city</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">State *</label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    maxLength={2}
-                    placeholder="e.g., NY"
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowStateKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.state || <span className="text-gray-400">Tap to enter state (e.g., NY)</span>}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-black mb-2">ZIP Code *</label>
-                  <input
-                    type="text"
-                    name="zipCode"
-                    value={formData.zipCode}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
+                  <div
+                    onClick={() => setShowZipKeyboard(true)}
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{formData.zipCode || <span className="text-gray-400">Tap to enter ZIP code</span>}</span>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4 mt-6">
@@ -277,6 +268,95 @@ export default function StoresPage() {
           </div>
         )}
       </div>
+
+      {/* On-Screen Inputs */}
+      {showNameKeyboard && (
+        <OnScreenKeyboard
+          value={formData.name}
+          onChange={(value) => setFormData({ ...formData, name: value })}
+          onClose={() => setShowNameKeyboard(false)}
+          onEnter={() => setShowNameKeyboard(false)}
+          title="Enter Deli Name"
+          type="text"
+        />
+      )}
+
+      {showEmailKeyboard && (
+        <OnScreenKeyboard
+          value={formData.email}
+          onChange={(value) => setFormData({ ...formData, email: value })}
+          onClose={() => setShowEmailKeyboard(false)}
+          onEnter={() => setShowEmailKeyboard(false)}
+          title="Enter Email"
+          type="email"
+        />
+      )}
+
+      {showPhoneKeyboard && (
+        <OnScreenKeyboard
+          value={formData.phone}
+          onChange={(value) => setFormData({ ...formData, phone: value })}
+          onClose={() => setShowPhoneKeyboard(false)}
+          onEnter={() => setShowPhoneKeyboard(false)}
+          title="Enter Phone Number"
+          type="text"
+        />
+      )}
+
+      {showTaxRateNumpad && (
+        <OnScreenNumpad
+          value={formData.taxRate}
+          onChange={(value) => setFormData({ ...formData, taxRate: value })}
+          onClose={() => setShowTaxRateNumpad(false)}
+          onEnter={() => setShowTaxRateNumpad(false)}
+          decimal={true}
+          title="Enter Tax Rate (0.08 for 8%)"
+        />
+      )}
+
+      {showAddressKeyboard && (
+        <OnScreenKeyboard
+          value={formData.address}
+          onChange={(value) => setFormData({ ...formData, address: value })}
+          onClose={() => setShowAddressKeyboard(false)}
+          onEnter={() => setShowAddressKeyboard(false)}
+          title="Enter Address"
+          type="text"
+        />
+      )}
+
+      {showCityKeyboard && (
+        <OnScreenKeyboard
+          value={formData.city}
+          onChange={(value) => setFormData({ ...formData, city: value })}
+          onClose={() => setShowCityKeyboard(false)}
+          onEnter={() => setShowCityKeyboard(false)}
+          title="Enter City"
+          type="text"
+        />
+      )}
+
+      {showStateKeyboard && (
+        <OnScreenKeyboard
+          value={formData.state}
+          onChange={(value) => setFormData({ ...formData, state: value })}
+          onClose={() => setShowStateKeyboard(false)}
+          onEnter={() => setShowStateKeyboard(false)}
+          title="Enter State"
+          type="text"
+        />
+      )}
+
+      {showZipKeyboard && (
+        <OnScreenKeyboard
+          value={formData.zipCode}
+          onChange={(value) => setFormData({ ...formData, zipCode: value })}
+          onClose={() => setShowZipKeyboard(false)}
+          onEnter={() => setShowZipKeyboard(false)}
+          title="Enter ZIP Code"
+          type="text"
+        />
+      )}
     </div>
   );
 }

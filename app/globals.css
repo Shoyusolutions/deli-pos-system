@@ -23,6 +23,34 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Mobile viewport fixes */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus on mobile */
+input, textarea, select {
+  font-size: 16px;
+}
+
+/* Fix for mobile viewport height issues */
+.min-h-screen {
+  min-height: 100vh;
+  /* Fallback for browsers that don't support dvh */
+  min-height: 100dvh;
+}
+
+/* Ensure touch targets are at least 44px for accessibility */
+button, .cursor-pointer {
+  min-height: 44px;
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 @keyframes shake {
@@ -40,4 +68,19 @@ body {
 
 .animate-shake {
   animation: shake 0.5s;
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
 }

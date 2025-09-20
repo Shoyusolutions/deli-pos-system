@@ -41,6 +41,32 @@ export default function CheckoutPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [notFoundUpc, setNotFoundUpc] = useState('');
   const [showAddProduct, setShowAddProduct] = useState(false);
+  // Mobile scan feedback overlay
+  const [scanFeedback, setScanFeedback] = useState<{show: boolean, product?: Product, message?: string}>({show: false});
+  const scanFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Mobile scan feedback functions
+  const showScanFeedback = (product?: Product, message?: string) => {
+    // Clear any existing timeout
+    if (scanFeedbackTimeoutRef.current) {
+      clearTimeout(scanFeedbackTimeoutRef.current);
+    }
+
+    setScanFeedback({ show: true, product, message });
+
+    // Auto-dismiss after 3 seconds
+    scanFeedbackTimeoutRef.current = setTimeout(() => {
+      setScanFeedback({ show: false });
+    }, 3000);
+  };
+
+  const dismissScanFeedback = () => {
+    if (scanFeedbackTimeoutRef.current) {
+      clearTimeout(scanFeedbackTimeoutRef.current);
+    }
+    setScanFeedback({ show: false });
+  };
+
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductPriceDisplay, setNewProductPriceDisplay] = useState('');
@@ -48,6 +74,10 @@ export default function CheckoutPage() {
   const [newProductCost, setNewProductCost] = useState('');
   const [newProductCostDisplay, setNewProductCostDisplay] = useState('');
   const [showManualKeyIn, setShowManualKeyIn] = useState(false);
+  const [showNewProductNameKeyboard, setShowNewProductNameKeyboard] = useState(false);
+  const [showNewProductPriceNumpad, setShowNewProductPriceNumpad] = useState(false);
+  const [showNewProductCostNumpad, setShowNewProductCostNumpad] = useState(false);
+  const [showNewSupplierKeyboard, setShowNewSupplierKeyboard] = useState(false);
   const [manualItemName, setManualItemName] = useState('');
   const [manualItemPrice, setManualItemPrice] = useState('');
   const [showManualNameKeyboard, setShowManualNameKeyboard] = useState(false);
@@ -297,6 +327,8 @@ export default function CheckoutPage() {
           } else {
             setCart([...cart, { product, quantity: 1 }]);
           }
+          // Show mobile scan feedback
+          showScanFeedback(product, 'OUT OF STOCK - OVERRIDE SALE');
         } else if (product.inventory !== undefined && newQuantity > product.inventory) {
           // Not enough inventory - show warning
           setMessage(`⚠️ LOW STOCK: Only ${product.inventory} left, selling ${newQuantity} - ${product.name}`);
@@ -311,6 +343,8 @@ export default function CheckoutPage() {
           } else {
             setCart([...cart, { product, quantity: 1 }]);
           }
+          // Show mobile scan feedback
+          showScanFeedback(product, `LOW STOCK: ${product.inventory} left`);
         } else {
           // Normal add to cart
           if (existingItem) {
@@ -323,6 +357,8 @@ export default function CheckoutPage() {
             setCart([...cart, { product, quantity: 1 }]);
           }
           setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
+          // Show mobile scan feedback
+          showScanFeedback(product);
         }
 
         setNotFoundUpc('');
@@ -646,7 +682,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden flex flex-col relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col relative">
       {/* Similar Product Found Dialog */}
       {showSimilarProductDialog && similarProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -879,53 +915,45 @@ export default function CheckoutPage() {
               </div>
               <div className="mb-3">
                 <label className="block text-sm font-medium text-black mb-1">Product Name *</label>
-                <input
-                  type="text"
-                  value={newProductName}
-                  onChange={(e) => setNewProductName(e.target.value)}
-                  placeholder="Enter product name"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  autoFocus
-                />
+                <div
+                  onClick={() => setShowNewProductNameKeyboard(true)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                >
+                  <span className="text-black">{newProductName || <span className="text-gray-400">Tap to enter product name</span>}</span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="block text-sm font-medium text-black mb-1">Retail Price *</label>
-                  <input
-                    type="text"
-                    value={newProductPriceDisplay}
-                    onChange={(e) => handlePriceInput(e.target.value, setNewProductPrice, setNewProductPriceDisplay)}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter 100 for $1.00</p>
+                  <div
+                    onClick={() => setShowNewProductPriceNumpad(true)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{newProductPriceDisplay ? `$${newProductPriceDisplay}` : <span className="text-gray-400">Tap to enter price</span>}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Tap to enter price</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-black mb-1">Cost</label>
-                  <input
-                    type="text"
-                    value={newProductCostDisplay}
-                    onChange={(e) => handlePriceInput(e.target.value, setNewProductCost, setNewProductCostDisplay)}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter 100 for $1.00</p>
+                  <div
+                    onClick={() => setShowNewProductCostNumpad(true)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{newProductCostDisplay ? `$${newProductCostDisplay}` : <span className="text-gray-400">Tap to enter cost</span>}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Tap to enter cost</p>
                 </div>
               </div>
               <div className="mb-5">
                 <label className="block text-sm font-medium text-black mb-1">Supplier/Source *</label>
                 {showNewSupplierInput ? (
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newSupplierName}
-                      onChange={(e) => setNewSupplierName(e.target.value)}
-                      placeholder="Enter new supplier name"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      autoFocus
-                    />
+                    <div
+                      onClick={() => setShowNewSupplierKeyboard(true)}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    >
+                      <span className="text-black">{newSupplierName || <span className="text-gray-400">Tap to enter supplier name</span>}</span>
+                    </div>
                     <button
                       type="button"
                       onClick={async () => {
@@ -1117,6 +1145,73 @@ export default function CheckoutPage() {
         </div>
       )}
 
+      {/* On-Screen Keyboards for New Product Form */}
+      {showNewProductNameKeyboard && (
+        <OnScreenKeyboard
+          value={newProductName}
+          onChange={setNewProductName}
+          onClose={() => setShowNewProductNameKeyboard(false)}
+          onEnter={() => setShowNewProductNameKeyboard(false)}
+          title="Enter Product Name"
+          type="text"
+        />
+      )}
+
+      {showNewProductPriceNumpad && (
+        <OnScreenNumpad
+          value={newProductPriceDisplay}
+          onChange={(value) => {
+            const cleanValue = value.replace(/\D/g, '');
+            if (!cleanValue) {
+              setNewProductPrice('');
+              setNewProductPriceDisplay('');
+              return;
+            }
+            setNewProductPrice(cleanValue);
+            const numValue = parseInt(cleanValue) || 0;
+            const dollars = (numValue / 100).toFixed(2);
+            setNewProductPriceDisplay(dollars);
+          }}
+          onClose={() => setShowNewProductPriceNumpad(false)}
+          onEnter={() => setShowNewProductPriceNumpad(false)}
+          decimal={true}
+          title="Enter Retail Price"
+        />
+      )}
+
+      {showNewProductCostNumpad && (
+        <OnScreenNumpad
+          value={newProductCostDisplay}
+          onChange={(value) => {
+            const cleanValue = value.replace(/\D/g, '');
+            if (!cleanValue) {
+              setNewProductCost('');
+              setNewProductCostDisplay('');
+              return;
+            }
+            setNewProductCost(cleanValue);
+            const numValue = parseInt(cleanValue) || 0;
+            const dollars = (numValue / 100).toFixed(2);
+            setNewProductCostDisplay(dollars);
+          }}
+          onClose={() => setShowNewProductCostNumpad(false)}
+          onEnter={() => setShowNewProductCostNumpad(false)}
+          decimal={true}
+          title="Enter Cost"
+        />
+      )}
+
+      {showNewSupplierKeyboard && (
+        <OnScreenKeyboard
+          value={newSupplierName}
+          onChange={setNewSupplierName}
+          onClose={() => setShowNewSupplierKeyboard(false)}
+          onEnter={() => setShowNewSupplierKeyboard(false)}
+          title="Enter Supplier Name"
+          type="text"
+        />
+      )}
+
       {/* On-Screen Keyboard for Manual Item Name */}
       {showManualNameKeyboard && (
         <OnScreenKeyboard
@@ -1225,8 +1320,9 @@ export default function CheckoutPage() {
         <div className="max-w-7xl mx-auto p-4 h-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2 flex flex-col h-full">
+            {/* Hide scanner section on mobile to save space */}
             {paymentMode === 'idle' && !showManualEntry && !notFoundUpc && (
-              <div className="bg-white rounded-xl shadow-sm p-2 sm:p-3 mb-3 flex-shrink-0">
+              <div className="hidden sm:block bg-white rounded-xl shadow-sm p-2 sm:p-3 mb-3 flex-shrink-0">
                 {/* Compact Scanner Status */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -1842,6 +1938,48 @@ export default function CheckoutPage() {
           )}
         </div>
       </div>
+
+      {/* Mobile Scan Feedback Overlay */}
+      {scanFeedback.show && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 pointer-events-none"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 pointer-events-auto transform animate-scale-in"
+            onClick={dismissScanFeedback}
+          >
+            <div className="text-center">
+              {/* Success icon */}
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+
+              {/* Product info */}
+              {scanFeedback.product && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-black mb-2">
+                    {scanFeedback.product.name}
+                  </h3>
+                  <div className="text-2xl font-bold text-green-600 mb-1">
+                    ${scanFeedback.product.price.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-black">
+                    {scanFeedback.message || 'Added to cart'}
+                  </div>
+                </div>
+              )}
+
+              {/* Tap to dismiss hint */}
+              <div className="text-xs text-gray-500 mt-4">
+                Tap to dismiss • Auto-dismiss in 3s
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   </div>
   );

@@ -17,6 +17,7 @@ import {
   Receipt,
   Printer
 } from 'lucide-react';
+import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 interface TransactionItem {
   upc: string;
@@ -98,6 +99,8 @@ export default function ReportsPage() {
   const [searching, setSearching] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionDetail | null>(null);
   const [loadingTransaction, setLoadingTransaction] = useState(false);
+  // On-screen input states
+  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
 
   useEffect(() => {
     const savedStoreId = localStorage.getItem('selectedStoreId');
@@ -382,14 +385,12 @@ export default function ReportsPage() {
           </div>
           <div className="flex gap-2 mb-4">
             <div className="relative flex-1">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by transaction number, date, or amount..."
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder:text-black"
-              />
+              <div
+                onClick={() => setShowSearchKeyboard(true)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+              >
+                <span className="text-black">{searchQuery || <span className="text-gray-400">Tap to search transactions</span>}</span>
+              </div>
               <Search className="absolute left-3 top-2.5 w-5 h-5 text-black" />
             </div>
             <button
@@ -651,6 +652,21 @@ export default function ReportsPage() {
           }
         }
       `}</style>
+
+      {/* On-Screen Search Input */}
+      {showSearchKeyboard && (
+        <OnScreenKeyboard
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClose={() => setShowSearchKeyboard(false)}
+          onEnter={() => {
+            setShowSearchKeyboard(false);
+            handleSearch();
+          }}
+          title="Search Transactions"
+          type="text"
+        />
+      )}
     </div>
   );
 }

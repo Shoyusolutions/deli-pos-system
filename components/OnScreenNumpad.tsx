@@ -55,6 +55,37 @@ export default function OnScreenNumpad({
     }
   }, [rawValue, onChange, decimal]);
 
+  // Physical keyboard support
+  useEffect(() => {
+    const handlePhysicalKeyboard = (e: KeyboardEvent) => {
+      // Prevent default for most keys to avoid browser behavior
+      if (e.key !== 'Tab' && e.key !== 'F5' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+      }
+
+      if (e.key === 'Enter') {
+        handleEnter();
+      } else if (e.key === 'Escape') {
+        if (onClose) onClose();
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key >= '0' && e.key <= '9') {
+        handleNumber(e.key);
+      } else if (e.key === '.' && decimal) {
+        // For decimal inputs, ignore . key since we handle it automatically
+        return;
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handlePhysicalKeyboard);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handlePhysicalKeyboard);
+    };
+  }, [rawValue, decimal]); // Dependencies for handleNumber and handleBackspace
+
   const handleNumber = (num: string) => {
     if (num === '.') return; // Ignore decimal button - we handle it automatically
 
@@ -84,7 +115,7 @@ export default function OnScreenNumpad({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6 md:p-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 sm:p-6 md:p-8">
       <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg">
         {/* Header */}
         <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
