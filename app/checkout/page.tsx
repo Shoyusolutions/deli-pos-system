@@ -544,12 +544,12 @@ export default function CheckoutPage() {
   };
 
   const getCardTotal = () => {
-    // Card price includes 4% fee on both subtotal AND tax
+    // Card price includes $0.30 fixed fee + 4% fee on both subtotal AND tax
     const baseTotal = getSubtotal() + getTax();
 
     if (storeSettings?.cashDiscountEnabled) {
-      // Apply 4% to the entire amount (subtotal + tax)
-      return baseTotal * (1 + storeSettings.cashDiscountRate / 100);
+      // Apply 4% to the entire amount (subtotal + tax) and add $0.30 fixed fee
+      return baseTotal * (1 + storeSettings.cashDiscountRate / 100) + 0.30;
     }
 
     return baseTotal;
@@ -588,7 +588,9 @@ export default function CheckoutPage() {
 
   const calculateChange = () => {
     const given = getCashDisplayAmount();
-    return given - getTotal('cash');
+    const total = getTotal('cash');
+    // Round to 2 decimal places to avoid floating point issues
+    return Math.round((given - total) * 100) / 100;
   };
 
   const completeTransaction = async (method: 'cash' | 'card' = 'cash') => {
@@ -610,7 +612,7 @@ export default function CheckoutPage() {
       // Calculate the appropriate total
       const transactionTotal = method === 'card' ? getCardTotal() : getCashTotal();
       const processingFee = method === 'card' && storeSettings?.cashDiscountEnabled
-        ? (getCashTotal() * storeSettings.cashDiscountRate / 100)
+        ? (getCashTotal() * storeSettings.cashDiscountRate / 100) + 0.30
         : 0;
 
       const response = await fetch('/api/transactions', {
@@ -662,13 +664,15 @@ export default function CheckoutPage() {
 
   const handleCashSubmit = () => {
     const change = calculateChange();
+    // Use >= 0 to include exact amounts (change of 0)
     if (change < 0) {
       setMessage('Insufficient cash amount');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
-    // Show confirmation dialog instead of directly processing
+    // Show confirmation dialog and hide numpad
     setShowCashConfirmation(true);
+    setShowCashNumpad(false);
   };
 
   const handleCashConfirmation = (confirmed: boolean) => {
@@ -677,6 +681,9 @@ export default function CheckoutPage() {
       setChangeAmount(change);
       setPaymentMode('change');
       completeTransaction('cash');
+    } else {
+      // If user says "No", take them back to the cash payment screen
+      setShowCashNumpad(true);
     }
     setShowCashConfirmation(false);
   };
@@ -1500,44 +1507,198 @@ export default function CheckoutPage() {
             )}
 
 
-            {/* OnScreen Numpad for Cash Payment */}
+            {/* Cash Payment Interface */}
             {showCashNumpad && paymentMode === 'cash' && (
-              <OnScreenNumpad
-                value={cashGiven}
-                onChange={(value) => {
-                  setCashGiven(value);
-                  // Auto-submit if change is >= 0
-                  if (value) {
-                    const amount = parseFloat(value) || 0;
-                    if (amount >= getTotal('cash')) {
-                      // Don't auto-submit, let user confirm
+              <div className="fixed inset-0 bg-gray-50 z-[9999]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const amount = parseFloat(cashGiven) || 0;
+                    const total = Math.round(getTotal('cash') * 100) / 100;
+                    if (amount >= total) {
+                      handleCashSubmit();
                     }
-                  }
-                }}
-                onClose={() => {
-                  setShowCashNumpad(false);
-                  setPaymentMode('payment');
-                  setCashGiven('');
-                }}
-                onEnter={() => {
-                  const amount = parseFloat(cashGiven) || 0;
-                  if (amount >= getTotal('cash')) {
+                  } else if (e.key === 'Escape') {
                     setShowCashNumpad(false);
-                    handleCashSubmit();
-                  } else {
-                    setMessage('Insufficient cash amount');
-                    setTimeout(() => setMessage(''), 3000);
+                    setPaymentMode('payment');
+                    setCashGiven('');
                   }
                 }}
-                decimal={true}
-                title={`Cash Payment - Total: $${getTotal('cash').toFixed(2)}`}
-                maxLength={10}
-              />
+              >
+                {/* Top Bar with Total and Actions */}
+                <div className="bg-white border-b shadow-sm p-4">
+                  <div className="flex items-center justify-between max-w-7xl mx-auto">
+                    <button
+                      onClick={() => {
+                        setShowCashNumpad(false);
+                        setPaymentMode('payment');
+                        setCashGiven('');
+                      }}
+                      className="text-gray-600 hover:text-gray-800"
+                    >
+                      ← Back
+                    </button>
+
+                    <div className="text-center flex-1">
+                      <div className="text-sm text-gray-500">Total Due</div>
+                      <div className="text-5xl font-bold text-black">${getTotal('cash').toFixed(2)}</div>
+                      <div className="text-lg text-gray-600 mt-1">
+                        Cash Received: <span className="font-semibold text-black">${cashGiven || '0.00'}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const amount = parseFloat(cashGiven) || 0;
+                        const total = Math.round(getTotal('cash') * 100) / 100;
+                        if (amount >= total) {
+                          handleCashSubmit();
+                        }
+                      }}
+                      className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all ${
+                        parseFloat(cashGiven || '0') >= Math.round(getTotal('cash') * 100) / 100
+                          ? 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                      disabled={parseFloat(cashGiven || '0') < Math.round(getTotal('cash') * 100) / 100}
+                    >
+                      Confirm →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Main Content Area */}
+                <div className="flex h-[calc(100vh-120px)] max-w-7xl mx-auto p-6 gap-6">
+                  {/* Left Side - Quick Presets */}
+                  <div className="w-80">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Quick Cash</h3>
+
+                    {/* Exact Amount - Special Button */}
+                    <button
+                      onClick={() => {
+                        const exactAmount = getTotal('cash').toFixed(2);
+                        setCashGiven(exactAmount);
+                      }}
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-5 px-4 rounded-xl hover:from-green-600 hover:to-green-700 font-semibold text-lg mb-4 shadow-lg transform hover:scale-102 transition-all"
+                    >
+                      <div>Exact Amount</div>
+                      <div className="text-2xl mt-1">${getTotal('cash').toFixed(2)}</div>
+                    </button>
+
+                    {/* Common Denominations */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { amount: '5.00', label: '$5' },
+                        { amount: '10.00', label: '$10' },
+                        { amount: '20.00', label: '$20' },
+                        { amount: '50.00', label: '$50' },
+                        { amount: '100.00', label: '$100' },
+                        { amount: '200.00', label: '$200' }
+                      ].map(({ amount, label }) => (
+                        <button
+                          key={amount}
+                          onClick={() => setCashGiven(amount)}
+                          className={`py-4 px-4 rounded-xl font-semibold text-xl transition-all transform hover:scale-105 ${
+                            cashGiven === amount
+                              ? 'bg-blue-600 text-white shadow-lg'
+                              : 'bg-white text-gray-800 hover:bg-blue-50 border-2 border-gray-200'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right Side - Large Numpad */}
+                  <div className="flex-1 max-w-2xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-700">Enter Custom Amount</h3>
+                      <button
+                        onClick={() => setCashGiven('')}
+                        className="text-red-600 hover:text-red-700 font-medium px-3 py-1"
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    {/* Amount Display */}
+                    <div className="bg-white rounded-xl p-6 mb-6 text-center border-2 border-gray-200">
+                      <div className="text-4xl font-bold text-black">
+                        ${cashGiven || '0.00'}
+                      </div>
+                    </div>
+
+                    {/* Large Numpad */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            const currentCents = cashGiven ? Math.round(parseFloat(cashGiven) * 100).toString() : '';
+                            if (currentCents.length < 6) {
+                              const newCents = currentCents + num;
+                              const newDollars = (parseInt(newCents) / 100).toFixed(2);
+                              setCashGiven(newDollars);
+                            }
+                          }}
+                          className="h-20 text-2xl font-semibold bg-white hover:bg-gray-50 text-black rounded-xl border-2 border-gray-200 transition-all transform hover:scale-105 active:scale-95"
+                        >
+                          {num}
+                        </button>
+                      ))}
+
+                      {/* Bottom Row */}
+                      <button
+                        onClick={() => {
+                          const currentCents = cashGiven ? Math.round(parseFloat(cashGiven) * 100).toString() : '';
+                          if (currentCents.length < 5) {
+                            const newCents = currentCents + '00';
+                            const newDollars = (parseInt(newCents) / 100).toFixed(2);
+                            setCashGiven(newDollars);
+                          }
+                        }}
+                        className="h-20 text-2xl font-semibold bg-white hover:bg-gray-50 text-black rounded-xl border-2 border-gray-200 transition-all transform hover:scale-105 active:scale-95"
+                      >
+                        00
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const currentCents = cashGiven ? Math.round(parseFloat(cashGiven) * 100).toString() : '';
+                          if (currentCents.length < 6) {
+                            const newCents = currentCents + '0';
+                            const newDollars = (parseInt(newCents) / 100).toFixed(2);
+                            setCashGiven(newDollars);
+                          }
+                        }}
+                        className="h-20 text-2xl font-semibold bg-white hover:bg-gray-50 text-black rounded-xl border-2 border-gray-200 transition-all transform hover:scale-105 active:scale-95"
+                      >
+                        0
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (cashGiven) {
+                            const currentCents = Math.round(parseFloat(cashGiven) * 100).toString();
+                            const newCents = currentCents.slice(0, -1);
+                            const newDollars = newCents ? (parseInt(newCents) / 100).toFixed(2) : '0.00';
+                            setCashGiven(newCents ? newDollars : '');
+                          }
+                        }}
+                        className="h-20 text-2xl font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all transform hover:scale-105 active:scale-95"
+                      >
+                        ⌫
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Cash Confirmation Modal */}
             {showCashConfirmation && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10001]">
                 <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
                   <div className="text-center">
                     <h2 className="text-2xl font-bold text-black mb-6">Confirm Cash Payment</h2>
