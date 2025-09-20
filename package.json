@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "cleanup": "MONGODB_URI='mongodb+srv://delipos_user:sldkfjh291832askdj@deli-pos.mamcjur.mongodb.net/deli_pos_system?retryWrites=true&w=majority&appName=Deli-Pos' node scripts/cleanup-test-data.js",
+    "seed:users": "node scripts/seed-users.js",
+    "seed:store": "node scripts/seed-store.js",
+    "seed:products": "node scripts/seed-products.js",
+    "seed:all": "npm run seed:users && npm run seed:store && npm run seed:products"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.891.0",
