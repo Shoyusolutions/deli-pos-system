@@ -8,16 +8,33 @@
     "start": "next start"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.891.0",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cookies-next": "^6.1.0",
+    "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.544.0",
+    "mongoose": "^8.18.1",
+    "next": "15.5.3",
+    "next-auth": "^4.24.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.3"
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.9"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
