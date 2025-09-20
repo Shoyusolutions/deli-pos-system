@@ -107,7 +107,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <div>
           <div className="mb-4">
             <label className="block text-black mb-2" htmlFor="email">
               Email
@@ -133,13 +133,16 @@ export default function LoginPage() {
           </div>
 
           <button
-            type="submit"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+            }}
             className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
-            disabled={loading}
+            disabled={loading || !email || !password}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
-        </form>
+        </div>
 
       </div>
 
