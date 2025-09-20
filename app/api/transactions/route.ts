@@ -146,8 +146,7 @@ export async function POST(req: NextRequest) {
       entityId: transaction._id.toString(),
       metadata: {
         transactionNumber,
-        reason: `${paymentMethod} transaction completed - Total: $${total.toFixed(2)}`,
-        inventoryWarnings: inventoryWarnings.length > 0 ? inventoryWarnings : undefined
+        reason: `${paymentMethod} transaction completed - Total: $${total.toFixed(2)}${inventoryWarnings.length > 0 ? ' (with inventory override)' : ''}`
       },
       severity: inventoryWarnings.length > 0 ? 'WARNING' : 'INFO',
       success: true,
