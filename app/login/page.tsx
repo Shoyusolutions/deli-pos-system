@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
   const [showPasswordKeyboard, setShowPasswordKeyboard] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Check if already authenticated
   useEffect(() => {
@@ -116,7 +118,9 @@ export default function LoginPage() {
               onClick={() => setShowEmailKeyboard(true)}
               className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
             >
-              {email || <span className="text-gray-400">Tap to enter your email</span>}
+              <span className="text-black">
+                {email || <span className="text-gray-400">Tap to enter your email</span>}
+              </span>
             </div>
           </div>
 
@@ -124,11 +128,31 @@ export default function LoginPage() {
             <label className="block text-black mb-2" htmlFor="password">
               Password
             </label>
-            <div
-              onClick={() => setShowPasswordKeyboard(true)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
-            >
-              {password ? '•'.repeat(password.length) : <span className="text-gray-400">Tap to enter your password</span>}
+            <div className="relative">
+              <div
+                onClick={() => setShowPasswordKeyboard(true)}
+                className="w-full p-3 pr-12 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
+              >
+                <span className="text-black">
+                  {password ? (showPassword ? password : '•'.repeat(password.length)) : <span className="text-gray-400">Tap to enter your password</span>}
+                </span>
+              </div>
+              {password && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPassword(!showPassword);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5 text-black" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-black" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

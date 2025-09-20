@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Delete, Space, ChevronUp } from 'lucide-react';
+import { X, Delete, Space, ChevronUp, Eye, EyeOff } from 'lucide-react';
 
 interface OnScreenKeyboardProps {
   value: string;
@@ -24,6 +24,7 @@ export default function OnScreenKeyboard({
 }: OnScreenKeyboardProps) {
   const [isShift, setIsShift] = useState(false);
   const [isCaps, setIsCaps] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Keyboard layouts
   const row1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
@@ -77,7 +78,7 @@ export default function OnScreenKeyboard({
     if (isShift) setIsShift(false);
   };
 
-  const displayValue = type === 'password' ? '•'.repeat(value.length) : value;
+  const displayValue = type === 'password' && !showPassword ? '•'.repeat(value.length) : value;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[9999]">
@@ -90,16 +91,29 @@ export default function OnScreenKeyboard({
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              <X className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-black" />
             </button>
           )}
         </div>
 
-        {/* Display */}
-        <div className="bg-gray-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 min-h-[35px] sm:min-h-[45px] md:min-h-[55px] flex items-center">
-          <span className="text-sm sm:text-base md:text-lg font-medium text-black truncate">
-            {displayValue || 'Type here...'}
+        {/* Display with password toggle */}
+        <div className="bg-gray-100 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 min-h-[35px] sm:min-h-[45px] md:min-h-[55px] flex items-center justify-between">
+          <span className="text-sm sm:text-base md:text-lg font-medium text-black truncate flex-1">
+            {displayValue || <span className="text-gray-400">Type here...</span>}
           </span>
+          {type === 'password' && value && (
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors ml-2"
+              type="button"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+              ) : (
+                <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Keyboard */}
