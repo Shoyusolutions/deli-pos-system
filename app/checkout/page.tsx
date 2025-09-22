@@ -820,7 +820,7 @@ export default function CheckoutPage() {
                 : item
             ));
           } else {
-            setCart([...cart, { product, quantity: 1 }]);
+            setCart([{ product, quantity: 1 }, ...cart]);
           }
           // Show mobile scan feedback
           showScanFeedback(product, 'OUT OF STOCK - OVERRIDE SALE');
@@ -836,7 +836,7 @@ export default function CheckoutPage() {
                 : item
             ));
           } else {
-            setCart([...cart, { product, quantity: 1 }]);
+            setCart([{ product, quantity: 1 }, ...cart]);
           }
           // Show mobile scan feedback
           showScanFeedback(product, `LOW STOCK: ${product.inventory} left`);
@@ -849,7 +849,7 @@ export default function CheckoutPage() {
                 : item
             ));
           } else {
-            setCart([...cart, { product, quantity: 1 }]);
+            setCart([{ product, quantity: 1 }, ...cart]);
           }
           setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
           // Show mobile scan feedback
@@ -946,7 +946,7 @@ export default function CheckoutPage() {
     };
 
     // Add to cart
-    setCart([...cart, { product: tempProduct, quantity: 1 }]);
+    setCart([{ product: tempProduct, quantity: 1 }, ...cart]);
     setMessage(`✓ Added: ${tempProduct.name} - $${tempProduct.price.toFixed(2)}`);
 
     // Reset states
@@ -1179,7 +1179,7 @@ export default function CheckoutPage() {
           cartItem.pricePerPound = foodItem.price;
         }
 
-        newCart.push(cartItem);
+        newCart.unshift(cartItem);
       }
     });
 
@@ -1225,7 +1225,7 @@ export default function CheckoutPage() {
       if (response.ok) {
         const newProduct = await response.json();
         // Add to cart
-        setCart([...cart, { product: newProduct, quantity: 1 }]);
+        setCart([{ product: newProduct, quantity: 1 }, ...cart]);
         setMessage(`✓ Product created and added: ${newProduct.name} - $${newProduct.price.toFixed(2)}`);
 
         // Reset states
@@ -1472,7 +1472,7 @@ export default function CheckoutPage() {
                           : item
                       ));
                     } else {
-                      setCart([...cart, { product: similarProduct, quantity: 1 }]);
+                      setCart([{ product: similarProduct, quantity: 1 }, ...cart]);
                     }
 
                     setMessage(`✓ Added: ${similarProduct.name} - $${similarProduct.price.toFixed(2)}`);
@@ -2371,7 +2371,7 @@ export default function CheckoutPage() {
                             quantity: 1,
                             totalPrice: parseFloat(keyInAmount)
                           };
-                          setCart([...cart, newCartItem]);
+                          setCart([newCartItem, ...cart]);
                         }
 
                         setShowKeyIn(false);
