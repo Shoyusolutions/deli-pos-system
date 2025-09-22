@@ -2193,7 +2193,8 @@ export default function CheckoutPage() {
                             product: {
                               upc: `KEYIN_${Date.now()}`,
                               name: 'Key in',
-                              price: parseFloat(keyInAmount)
+                              price: parseFloat(keyInAmount),
+                              inventory: 999
                             },
                             quantity: 1,
                             totalPrice: parseFloat(keyInAmount)
