@@ -2115,6 +2115,15 @@ export default function CheckoutPage() {
                   <div className="flex justify-between items-center gap-6 px-2 py-1">
                     <button
                       onClick={() => {
+                        setShowSearchKeyboard(true);
+                      }}
+                      className="text-purple-600 hover:text-purple-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 active:bg-purple-200 transition-colors text-sm font-medium"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Search</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         setShowUpcNumpad(true);
                       }}
                       className="text-blue-600 hover:text-blue-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition-colors text-sm font-medium"
@@ -2130,15 +2139,6 @@ export default function CheckoutPage() {
                     >
                       <Plus className="w-4 h-4" />
                       <span>Manual Item</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSearchKeyboard(true);
-                      }}
-                      className="text-purple-600 hover:text-purple-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 active:bg-purple-200 transition-colors text-sm font-medium"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      <span>Search</span>
                     </button>
                     <button
                       onClick={() => {
