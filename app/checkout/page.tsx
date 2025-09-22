@@ -40,6 +40,8 @@ export default function CheckoutPage() {
   // Scanner and manual entry states
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showUpcNumpad, setShowUpcNumpad] = useState(false);
+  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [manualUpc, setManualUpc] = useState('');
   const [scanBuffer, setScanBuffer] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -1946,7 +1948,57 @@ export default function CheckoutPage() {
             }
           }}
           decimal={false}
+          maxLength={15}
           title="Enter UPC Code"
+        />
+      )}
+
+      {/* On-Screen Keyboard for Product Search */}
+      {showSearchKeyboard && (
+        <OnScreenKeyboard
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClose={() => setShowSearchKeyboard(false)}
+          onEnter={async () => {
+            setShowSearchKeyboard(false);
+            if (searchQuery.trim() && storeId) {
+              try {
+                const response = await fetch(`/api/products?storeId=${storeId}&search=${encodeURIComponent(searchQuery.trim())}`);
+                if (response.ok) {
+                  const products = await response.json();
+                  if (products.length > 0) {
+                    const product = products[0]; // Use first match
+                    const newCartItem: CartItem = {
+                      product: {
+                        _id: product._id,
+                        upc: product.upc,
+                        name: product.name,
+                        price: product.price,
+                        inventory: product.inventory
+                      },
+                      quantity: 1
+                    };
+                    setCart([...cart, newCartItem]);
+                    setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
+                    setTimeout(() => setMessage(''), 3000);
+                  } else {
+                    setMessage('❌ No products found');
+                    setTimeout(() => setMessage(''), 3000);
+                  }
+                } else {
+                  setMessage('❌ Search failed');
+                  setTimeout(() => setMessage(''), 3000);
+                }
+              } catch (error) {
+                console.error('Search error:', error);
+                setMessage('❌ Search error');
+                setTimeout(() => setMessage(''), 3000);
+              }
+              setSearchQuery('');
+            }
+          }}
+          title="Search Products by Name"
+          type="text"
         />
       )}
 
@@ -2081,12 +2133,12 @@ export default function CheckoutPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setShowKeyIn(true);
+                        setShowSearchKeyboard(true);
                       }}
-                      className="text-orange-600 hover:text-orange-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-colors text-sm font-medium"
+                      className="text-purple-600 hover:text-purple-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 active:bg-purple-200 transition-colors text-sm font-medium"
                     >
-                      <span className="text-lg">🔢</span>
-                      <span>Key in</span>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Search</span>
                     </button>
                     <button
                       onClick={() => {

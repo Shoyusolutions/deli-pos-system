@@ -95,8 +95,8 @@ export default function OnScreenNumpad({
   const handleNumber = (num: string) => {
     if (num === '.') return; // Ignore decimal button - we handle it automatically
 
-    // Limit the length of cents (e.g., 999999 = $9999.99)
-    if (rawValue.length >= 6) return;
+    // Limit the length based on maxLength parameter
+    if (rawValue.length >= maxLength) return;
 
     // Don't allow leading zeros
     if (rawValue === '0' && num === '0') return;
