@@ -672,11 +672,19 @@ export default function CheckoutPage() {
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/products?storeId=${storeId}&search=${encodeURIComponent(query.trim())}`);
+      const searchUrl = `/api/products?storeId=${storeId}&search=${encodeURIComponent(query.trim())}`;
+      console.log('Search URL:', searchUrl); // Debug log
+      const response = await fetch(searchUrl);
+      console.log('Search response status:', response.status); // Debug log
+
       if (response.ok) {
         const products = await response.json();
+        console.log('Search results:', products); // Debug log
         setSearchResults(products.slice(0, 10)); // Limit to 10 results
       } else {
+        console.log('Search failed with status:', response.status);
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
         setSearchResults([]);
       }
     } catch (error) {
@@ -2022,13 +2030,13 @@ export default function CheckoutPage() {
             <div className="flex-1 overflow-y-auto">
               {isSearching && (
                 <div className="text-center py-4">
-                  <div className="text-gray-500">Searching...</div>
+                  <div className="text-black">Searching...</div>
                 </div>
               )}
 
               {!isSearching && searchQuery && searchResults.length === 0 && (
                 <div className="text-center py-4">
-                  <div className="text-gray-500">No products found</div>
+                  <div className="text-black">No products found</div>
                 </div>
               )}
 
@@ -2058,7 +2066,7 @@ export default function CheckoutPage() {
                       className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
                     >
                       <div className="font-medium text-black">{product.name}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-black">
                         ${product.price.toFixed(2)} • Stock: {product.inventory}
                       </div>
                     </button>
@@ -2069,7 +2077,7 @@ export default function CheckoutPage() {
               {!searchQuery && (
                 <div className="text-center py-8">
                   <ShoppingCart className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                  <div className="text-gray-500">Start typing to search products</div>
+                  <div className="text-black">Start typing to search products</div>
                 </div>
               )}
             </div>

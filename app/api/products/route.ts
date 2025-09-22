@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const upc = searchParams.get('upc');
     const storeId = searchParams.get('storeId');
+    const search = searchParams.get('search');
 
     if (!storeId) {
       return NextResponse.json({ error: 'Store ID is required' }, { status: 400 });
@@ -22,6 +23,16 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 });
       }
       return NextResponse.json(product);
+    }
+
+    // Handle search functionality
+    if (search) {
+      const searchRegex = new RegExp(search, 'i'); // Case-insensitive search
+      const products = await Product.find({
+        storeId,
+        name: { $regex: searchRegex }
+      }).sort({ name: 1 }).limit(20); // Limit results for performance
+      return NextResponse.json(products);
     }
 
     const products = await Product.find({ storeId }).sort({ name: 1 });
