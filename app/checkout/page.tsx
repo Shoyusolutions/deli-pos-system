@@ -2397,7 +2397,7 @@ export default function CheckoutPage() {
 
                     {/* Large Numpad */}
                     <div className="grid grid-cols-3 gap-3">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((num) => (
                         <button
                           key={num}
                           onClick={() => {
