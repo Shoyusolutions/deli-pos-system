@@ -41,6 +41,7 @@ export default function CheckoutPage() {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showUpcNumpad, setShowUpcNumpad] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -2020,9 +2021,10 @@ export default function CheckoutPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={() => setShowSearchKeyboard(true)}
                 placeholder="Type product name..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer"
+                readOnly
               />
             </div>
 
@@ -2056,10 +2058,16 @@ export default function CheckoutPage() {
                           },
                           quantity: 1
                         };
-                        setCart([...cart, newCartItem]);
-                        setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
-                        setTimeout(() => setMessage(''), 3000);
+
+                        // Add item to top of cart (prepend instead of append)
+                        setCart([newCartItem, ...cart]);
+
+                        // Show scan feedback in the middle of screen
+                        showScanFeedback(product, `Added: ${product.name} - $${product.price.toFixed(2)}`);
+
+                        // Close modal and reset search
                         setShowSearchModal(false);
+                        setShowSearchKeyboard(false);
                         setSearchQuery('');
                         setSearchResults([]);
                       }}
@@ -2083,6 +2091,18 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* On-Screen Keyboard for Search Input */}
+      {showSearchKeyboard && (
+        <OnScreenKeyboard
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClose={() => setShowSearchKeyboard(false)}
+          onEnter={() => setShowSearchKeyboard(false)}
+          title="Search Products"
+          type="text"
+        />
       )}
 
       {/* On-Screen Numpad for Key in Amount */}
