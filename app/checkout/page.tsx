@@ -229,6 +229,13 @@ export default function CheckoutPage() {
       { name: 'Detox', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
       { name: 'Create Your Own Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size-custom' },
     ],
+    'COFFEE/TEA': [
+      { name: 'Hot Coffee', prices: {small: 1.50, large: 2.00}, requiresOptions: true, optionType: 'coffee-size' },
+      { name: 'Iced Coffee', prices: {small: 2.00, large: 3.00}, requiresOptions: true, optionType: 'coffee-size' },
+      { name: 'Cappuccino', prices: {small: 3.00, large: 4.00}, requiresOptions: true, optionType: 'cappuccino-flavor-size' },
+      { name: 'Cup of Ice', price: 1.00, requiresOptions: false },
+      { name: 'Hot Tea', prices: {small: 1.50, large: 2.00}, requiresOptions: true, optionType: 'coffee-size' },
+    ],
     'PASTRY': [
       { name: 'Pastry', price: 2.50, requiresOptions: false },
     ],
@@ -319,6 +326,14 @@ export default function CheckoutPage() {
       multiSelect: true,
       maxFree: 7,
       extraCharge: 1.50
+    },
+    'coffee-size': {
+      title: 'Choose Size',
+      options: ['Small', 'Large']
+    },
+    'cappuccino-flavor-size': {
+      title: 'Choose Flavor and Size',
+      options: ['French Vanilla Small', 'French Vanilla Large', 'Chocolate Small', 'Chocolate Large']
     },
   };
 
@@ -543,6 +558,19 @@ export default function CheckoutPage() {
       { name: 'Chipotle Chicken (1 lb)', price: 13.99 },
       { name: 'Honey Turkey (1 lb)', price: 13.99 },
       { name: 'Oven Gold Turkey (1 lb)', price: 13.99 }
+    ],
+    'COFFEE/TEA': [
+      { name: 'Hot Coffee (Small)', price: 1.50 },
+      { name: 'Hot Coffee (Large)', price: 2.00 },
+      { name: 'Iced Coffee (Small)', price: 2.00 },
+      { name: 'Iced Coffee (Large)', price: 3.00 },
+      { name: 'Cappuccino French Vanilla (Small)', price: 3.00 },
+      { name: 'Cappuccino French Vanilla (Large)', price: 4.00 },
+      { name: 'Cappuccino Chocolate (Small)', price: 3.00 },
+      { name: 'Cappuccino Chocolate (Large)', price: 4.00 },
+      { name: 'Cup of Ice', price: 1.00 },
+      { name: 'Hot Tea (Small)', price: 1.50 },
+      { name: 'Hot Tea (Large)', price: 2.00 }
     ],
     'PASTRY': [
       { name: 'Pastry', price: 2.50 }
@@ -2692,6 +2720,12 @@ export default function CheckoutPage() {
                           price = selectedBaseItem.prices[option.toLowerCase()];
                         } else if (selectedBaseItem.optionType === 'juice-size' || selectedBaseItem.optionType === 'juice-size-custom') {
                           price = selectedBaseItem.prices[option.toLowerCase()];
+                        } else if (selectedBaseItem.optionType === 'coffee-size') {
+                          price = selectedBaseItem.prices[option.toLowerCase()];
+                        } else if (selectedBaseItem.optionType === 'cappuccino-flavor-size') {
+                          // Extract size from option (e.g., "French Vanilla Small" -> "small")
+                          const sizePart = option.split(' ').pop();
+                          price = selectedBaseItem.prices[sizePart.toLowerCase()];
                         } else {
                           price = selectedBaseItem.prices[option];
                         }
@@ -2758,6 +2792,14 @@ export default function CheckoutPage() {
                                 fullName = `${selectedBaseItem.name} (${option})`;
                               } else if (selectedBaseItem.optionType === 'juice-size') {
                                 fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType === 'coffee-size') {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType === 'cappuccino-flavor-size') {
+                                // Format: "Cappuccino (French Vanilla, Small)"
+                                const parts = option.split(' ');
+                                const size = parts.pop();
+                                const flavor = parts.join(' ');
+                                fullName = `${selectedBaseItem.name} (${flavor}, ${size})`;
                               } else {
                                 fullName = `${selectedBaseItem.name} (${option})`;
                               }
