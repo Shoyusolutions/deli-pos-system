@@ -115,7 +115,7 @@ export default function OnScreenKeyboard({
 
   return (
     <div className="fixed inset-0 flex items-end justify-center z-[99999] pointer-events-none">
-      <div className="bg-white rounded-t-2xl shadow-2xl p-2 sm:p-3 md:p-4 w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[75vh] sm:max-h-[80vh] overflow-y-auto pointer-events-auto">
+      <div className="bg-white rounded-t-2xl shadow-2xl p-2 sm:p-3 md:p-4 w-full max-h-[75vh] sm:max-h-[80vh] overflow-y-auto pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-2 sm:mb-3 pb-1 sm:pb-2 border-b">
           <h3 className="text-sm sm:text-base md:text-lg font-semibold text-black">{title}</h3>
@@ -165,7 +165,7 @@ export default function OnScreenKeyboard({
           </div>
 
           {/* QWERTY Row */}
-          <div className="flex gap-0.5 justify-center px-1 sm:px-3">
+          <div className="flex gap-0.5 justify-center">
             {row2.map((key) => (
               <button
                 key={key}
@@ -178,7 +178,7 @@ export default function OnScreenKeyboard({
           </div>
 
           {/* ASDF Row */}
-          <div className="flex gap-0.5 justify-center px-3 sm:px-6">
+          <div className="flex gap-0.5 justify-center">
             {row3.map((key) => (
               <button
                 key={key}
