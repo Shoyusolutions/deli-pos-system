@@ -39,6 +39,7 @@ export default function CheckoutPage() {
 
   // Scanner and manual entry states
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showUpcNumpad, setShowUpcNumpad] = useState(false);
   const [manualUpc, setManualUpc] = useState('');
   const [scanBuffer, setScanBuffer] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -1932,6 +1933,23 @@ export default function CheckoutPage() {
         />
       )}
 
+      {/* On-Screen Numpad for UPC Entry */}
+      {showUpcNumpad && (
+        <OnScreenNumpad
+          value={manualUpc}
+          onChange={setManualUpc}
+          onClose={() => setShowUpcNumpad(false)}
+          onEnter={() => {
+            setShowUpcNumpad(false);
+            if (manualUpc.trim()) {
+              handleManualSubmit({ preventDefault: () => {} } as React.FormEvent);
+            }
+          }}
+          decimal={false}
+          title="Enter UPC Code"
+        />
+      )}
+
       {/* On-Screen Numpad for Key in Amount */}
       {showKeyInNumpad && (
         <OnScreenNumpad
@@ -2045,8 +2063,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between items-center gap-6 px-2 py-1">
                     <button
                       onClick={() => {
-                        setShowManualEntry(true);
-                        setTimeout(() => manualInputRef.current?.focus(), 100);
+                        setShowUpcNumpad(true);
                       }}
                       className="text-blue-600 hover:text-blue-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition-colors text-sm font-medium"
                     >
