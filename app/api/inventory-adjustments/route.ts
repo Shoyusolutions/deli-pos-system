@@ -18,22 +18,63 @@ export async function POST(req: NextRequest) {
     const {
       storeId,
       upc,
+      productUpc,
+      productName,
       adjustmentType,
       quantityChange,
+      previousCount,
+      newCount,
+      discrepancy,
       reason,
       notes,
       userId,
-      userName
+      userName,
+      timestamp
     } = body;
 
-    if (!storeId || !upc || !adjustmentType || quantityChange === undefined || !reason) {
+    // Support both formats - reconcile format and regular adjustment format
+    const actualUpc = upc || productUpc;
+
+    // Handle reconcile format - when physical count is provided
+    if (previousCount !== undefined && newCount !== undefined && discrepancy !== undefined) {
+      // Reconcile mode - don't need to check for product since it was already updated
+      if (!storeId || !actualUpc || !reason) {
+        return NextResponse.json({
+          error: 'Missing required fields: storeId, upc, and reason are required'
+        }, { status: 400 });
+      }
+
+      // Create inventory adjustment record for reconciliation
+      const adjustment = new InventoryAdjustment({
+        storeId,
+        upc: actualUpc,
+        productName: productName || 'Unknown Product',
+        adjustmentType: 'reconcile',
+        quantityBefore: previousCount,
+        quantityAfter: newCount,
+        quantityChanged: discrepancy,
+        reason,
+        adjustedBy: userId || 'system',
+        adjustedByName: userName,
+        notes,
+        createdAt: timestamp || new Date()
+      });
+
+      await adjustment.save({ session });
+      await session.commitTransaction();
+
+      return NextResponse.json(adjustment, { status: 201 });
+    }
+
+    // Regular adjustment format
+    if (!storeId || !actualUpc || !adjustmentType || quantityChange === undefined || !reason) {
       return NextResponse.json({
         error: 'Missing required fields: storeId, upc, adjustmentType, quantityChange, and reason are required'
       }, { status: 400 });
     }
 
     // Find the product
-    const product = await Product.findOne({ upc, storeId }).session(session);
+    const product = await Product.findOne({ upc: actualUpc, storeId }).session(session);
     if (!product) {
       await session.abortTransaction();
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });

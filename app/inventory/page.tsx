@@ -36,6 +36,11 @@ export default function InventoryPage() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Inventory update mode states
+  const [updateMode, setUpdateMode] = useState<'select' | 'add' | 'remove' | 'reconcile'>('select');
+  const [reconcileCount, setReconcileCount] = useState('');
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+
   // Form states for adding/updating
   const [upcInput, setUpcInput] = useState('');
   const [productName, setProductName] = useState('');
@@ -46,7 +51,6 @@ export default function InventoryPage() {
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [quantityInput, setQuantityInput] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [updateMode, setUpdateMode] = useState<'add' | 'remove'>('add');
 
   // Supplier states
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -75,13 +79,14 @@ export default function InventoryPage() {
   const [editName, setEditName] = useState('');
   const [editCost, setEditCost] = useState('');
   const [manualUpc, setManualUpc] = useState('');
+  const [showReconcileNumpad, setShowReconcileNumpad] = useState(false);
 
   // On-screen keyboard states
   const [showNameKeyboard, setShowNameKeyboard] = useState(false);
   const [showPriceNumpad, setShowPriceNumpad] = useState(false);
   const [showCostNumpad, setShowCostNumpad] = useState(false);
   const [showQuantityNumpad, setShowQuantityNumpad] = useState(false);
-  const [activeInputField, setActiveInputField] = useState<'name' | 'price' | 'cost' | 'quantity' | null>(null);
+  const [activeInputField, setActiveInputField] = useState<'name' | 'price' | 'cost' | 'quantity' | 'reconcile' | null>(null);
   // Edit mode on-screen inputs
   const [showEditNameKeyboard, setShowEditNameKeyboard] = useState(false);
   const [showEditPriceNumpad, setShowEditPriceNumpad] = useState(false);
@@ -626,55 +631,139 @@ export default function InventoryPage() {
 
   const handleUpdateStock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct || !quantityInput) {
-      setMessage('Please enter quantity');
-      return;
-    }
 
-    const quantity = parseInt(quantityInput);
-    const adjustedQuantity = updateMode === 'remove' ? -quantity : quantity;
-
-    try {
-      const response = await fetch('/api/products', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId,
-          upc: selectedProduct.upc,
-          addInventory: adjustedQuantity
-        })
-      });
-
-      if (response.ok) {
-        const updatedProduct = await response.json();
-        const action = updateMode === 'add' ? 'Added' : 'Removed';
-        setMessage(`✓ ${action} ${Math.abs(adjustedQuantity)} units. ${selectedProduct.name} now has ${updatedProduct.inventory} in stock`);
-        setProducts(products.map(p =>
-          p.upc === selectedProduct.upc ? updatedProduct : p
-        ));
-
-        // Reset form for next scan
-        setQuantityInput('');
-        setSelectedProduct(null);
-        setUpcInput('');
-        setProductName('');
-        setProductPrice('');
-        setProductPriceDisplay('');
-        setProductCostDisplay('');
-        setUpdateMode('add'); // Reset to add mode
-
-        // Focus back on UPC input for next scan
-        setTimeout(() => {
-          if (upcInputRef.current) {
-            upcInputRef.current.focus();
-          }
-        }, 100);
-
-        // Clear success message after 3 seconds
-        setTimeout(() => setMessage(''), 3000);
+    if (updateMode === 'reconcile') {
+      // Handle reconcile mode
+      if (!selectedProduct || !reconcileCount) {
+        setMessage('Please enter physical count');
+        return;
       }
-    } catch (error) {
-      setMessage('Error updating stock');
+
+      const physicalCount = parseInt(reconcileCount);
+      const discrepancy = physicalCount - selectedProduct.inventory;
+
+      // If there's a discrepancy and no reason provided, require a reason
+      if (discrepancy !== 0 && !adjustmentReason) {
+        setMessage('Please select a reason for the discrepancy');
+        return;
+      }
+
+      try {
+        // Update inventory to match physical count
+        const inventoryResponse = await fetch('/api/products', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storeId,
+            upc: selectedProduct.upc,
+            setInventory: physicalCount // Use setInventory for absolute value
+          })
+        });
+
+        if (inventoryResponse.ok) {
+          const updatedProduct = await inventoryResponse.json();
+
+          // If there's a discrepancy, record the adjustment
+          if (discrepancy !== 0) {
+            await fetch('/api/inventory-adjustments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                storeId,
+                productUpc: selectedProduct.upc,
+                productName: selectedProduct.name,
+                previousCount: selectedProduct.inventory,
+                newCount: physicalCount,
+                discrepancy: discrepancy,
+                reason: adjustmentReason,
+                timestamp: new Date()
+              })
+            });
+          }
+
+          // Show appropriate message based on discrepancy
+          if (discrepancy === 0) {
+            setMessage(`✓ Inventory verified: ${selectedProduct.name} has ${physicalCount} units (no discrepancy)`);
+          } else if (discrepancy < 0) {
+            setMessage(`⚠️ Inventory adjusted: ${selectedProduct.name} - Missing ${Math.abs(discrepancy)} units (${adjustmentReason})`);
+          } else {
+            setMessage(`✓ Inventory adjusted: ${selectedProduct.name} - Found ${discrepancy} extra units (${adjustmentReason})`);
+          }
+
+          setProducts(products.map(p =>
+            p.upc === selectedProduct.upc ? updatedProduct : p
+          ));
+
+          // Reset form for next item
+          setReconcileCount('');
+          setAdjustmentReason('');
+          setSelectedProduct(null);
+          setUpcInput('');
+
+          // Focus back on UPC input
+          setTimeout(() => {
+            if (upcInputRef.current) {
+              upcInputRef.current.focus();
+            }
+          }, 100);
+
+          // Clear message after 5 seconds
+          setTimeout(() => setMessage(''), 5000);
+        }
+      } catch (error) {
+        setMessage('Error reconciling inventory');
+      }
+    } else {
+      // Handle add/remove mode
+      if (!selectedProduct || !quantityInput) {
+        setMessage('Please enter quantity');
+        return;
+      }
+
+      const quantity = parseInt(quantityInput);
+      const adjustedQuantity = updateMode === 'remove' ? -quantity : quantity;
+
+      try {
+        const response = await fetch('/api/products', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storeId,
+            upc: selectedProduct.upc,
+            addInventory: adjustedQuantity
+          })
+        });
+
+        if (response.ok) {
+          const updatedProduct = await response.json();
+          const action = updateMode === 'add' ? 'Added' : 'Removed';
+          setMessage(`✓ ${action} ${Math.abs(adjustedQuantity)} units. ${selectedProduct.name} now has ${updatedProduct.inventory} in stock`);
+          setProducts(products.map(p =>
+            p.upc === selectedProduct.upc ? updatedProduct : p
+          ));
+
+          // Reset form for next scan
+          setQuantityInput('');
+          setSelectedProduct(null);
+          setUpcInput('');
+          setProductName('');
+          setProductPrice('');
+          setProductPriceDisplay('');
+          setProductCostDisplay('');
+
+          // Focus back on UPC input for next scan
+          setTimeout(() => {
+            if (upcInputRef.current) {
+              upcInputRef.current.focus();
+            }
+          }, 100);
+
+          // Clear success message after 3 seconds
+          setTimeout(() => setMessage(''), 3000);
+        }
+      } catch (error) {
+        setMessage('Error updating stock');
+      }
     }
   };
 
@@ -1014,6 +1103,7 @@ export default function InventoryPage() {
               <p className="text-black">View items with less than 10 units</p>
             </button>
 
+            {/* Hidden for now - Find Duplicates button
             <button
               onClick={() => {
                 setMode('duplicates');
@@ -1029,6 +1119,7 @@ export default function InventoryPage() {
               <h2 className="text-xl font-semibold mb-2 text-black">Find Duplicates</h2>
               <p className="text-black">Find and merge duplicate products</p>
             </button>
+            */}
           </div>
         </div>
       </div>
@@ -1166,20 +1257,109 @@ export default function InventoryPage() {
 
   // Update Stock
   if (mode === 'update') {
+    // Show mode selection first
+    if (updateMode === 'select') {
+      return (
+        <div className="min-h-screen bg-gray-100 p-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-bold text-black">Update Stock</h1>
+              <button
+                onClick={() => {
+                  setUpdateMode('select');
+                  resetForm();
+                  setMode('menu');
+                }}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Back to Menu
+              </button>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold text-black mb-6">What would you like to do?</h2>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => setUpdateMode('add')}
+                  className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
+                >
+                  <div className="flex items-center">
+                    <div className="text-blue-500 mr-4">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-black">Add Inventory</h3>
+                      <p className="text-gray-600">Receiving new stock or restocking items</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setUpdateMode('remove')}
+                  className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-all"
+                >
+                  <div className="flex items-center">
+                    <div className="text-red-500 mr-4">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-black">Remove Inventory</h3>
+                      <p className="text-gray-600">Items damaged, expired, or removed</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setUpdateMode('reconcile')}
+                  className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
+                >
+                  <div className="flex items-center">
+                    <div className="text-green-500 mr-4">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-black">Reconcile (Physical Count)</h3>
+                      <p className="text-gray-600">Count actual stock and update system to match</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Original update stock flow with modifications based on mode
     return (
       <>
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-black">Update Stock</h1>
+            <h1 className="text-3xl font-bold text-black">
+              {updateMode === 'add' ? 'Add Inventory' :
+               updateMode === 'remove' ? 'Remove Inventory' :
+               'Reconcile Inventory'}
+            </h1>
             <button
               onClick={() => {
-                resetForm();
-                setMode('menu');
+                setUpdateMode('select');
+                setReconcileCount('');
+                setAdjustmentReason('');
+                setQuantityInput('');
+                setSelectedProduct(null);
+                setUpcInput('');
               }}
               className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
             >
-              Back to Menu
+              Back to Selection
             </button>
           </div>
 
@@ -1413,78 +1593,157 @@ export default function InventoryPage() {
                   </div>
                 )}
 
-                <div className="mb-6">
-                  <label className="block text-black mb-3 font-semibold">Select Operation:</label>
-                  <div className="flex gap-4 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setUpdateMode('add')}
-                      className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                        updateMode === 'add'
-                          ? 'bg-green-50 border-green-500 text-green-700'
-                          : 'bg-white border-gray-300 text-black hover:border-gray-400'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span className="font-medium">Add Stock</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setUpdateMode('remove')}
-                      className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                        updateMode === 'remove'
-                          ? 'bg-red-50 border-red-500 text-red-700'
-                          : 'bg-white border-gray-300 text-black hover:border-gray-400'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                      </svg>
-                      <span className="font-medium">Remove Stock</span>
-                    </button>
-                  </div>
+                {/* Reconcile Mode - Physical Count Entry */}
+                {updateMode === 'reconcile' ? (
+                  <div className="mb-6">
+                    <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-4">
+                      <h3 className="font-semibold text-black mb-2">Physical Inventory Count</h3>
+                      <p className="text-sm text-gray-700">Count the actual items on the shelf and enter the total below.</p>
+                    </div>
 
-                  <label className="block text-black mb-2">How many?</label>
-                  <div
-                    onClick={() => {
-                      setActiveInputField('quantity');
-                      setShowQuantityNumpad(true);
-                    }}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      setActiveInputField('quantity');
-                      setShowQuantityNumpad(true);
-                    }}
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                  >
-                    <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
+                    <label className="block text-black mb-2 font-medium">Physical Count:</label>
+                    <div
+                      onClick={() => {
+                        setActiveInputField('reconcile');
+                        setShowReconcileNumpad(true);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        setActiveInputField('reconcile');
+                        setShowReconcileNumpad(true);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation mb-3"
+                    >
+                      <span className="text-black">{reconcileCount || <span className="text-gray-400">Tap to enter physical count</span>}</span>
+                    </div>
+
+                    {reconcileCount && (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-600">System Count:</span>
+                            <span className="text-lg font-semibold text-black">{selectedProduct.inventory}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-600">Physical Count:</span>
+                            <span className="text-lg font-semibold text-black">{reconcileCount}</span>
+                          </div>
+                          <div className="border-t pt-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600">Discrepancy:</span>
+                              <span className={`text-lg font-bold ${
+                                parseInt(reconcileCount) - selectedProduct.inventory < 0
+                                  ? 'text-red-600'
+                                  : parseInt(reconcileCount) - selectedProduct.inventory > 0
+                                  ? 'text-green-600'
+                                  : 'text-gray-600'
+                              }`}>
+                                {parseInt(reconcileCount) - selectedProduct.inventory > 0 && '+'}
+                                {parseInt(reconcileCount) - selectedProduct.inventory}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {parseInt(reconcileCount) !== selectedProduct.inventory && (
+                          <div>
+                            <label className="block text-black mb-2 font-medium">Reason for Discrepancy:</label>
+                            <select
+                              value={adjustmentReason}
+                              onChange={(e) => setAdjustmentReason(e.target.value)}
+                              className="w-full p-3 border border-gray-300 rounded-lg text-black bg-white"
+                              required
+                            >
+                              <option value="">Select a reason...</option>
+                              <option value="theft">Suspected Theft</option>
+                              <option value="damage">Damaged/Expired</option>
+                              <option value="miscount">Previous Count Error</option>
+                              <option value="received">Unreported Delivery</option>
+                              <option value="return">Customer Return</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {quantityInput && (
-                    <p className="text-sm mt-2 font-medium">
-                      {updateMode === 'add' ? (
-                        <span className="text-green-600">
-                          New stock will be: {selectedProduct.inventory + parseInt(quantityInput || '0')}
-                        </span>
-                      ) : (
-                        <span className="text-red-600">
-                          New stock will be: {Math.max(0, selectedProduct.inventory - parseInt(quantityInput || '0'))}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </div>
+                ) : (
+                  /* Add/Remove Mode - Quantity Entry */
+                  <div className="mb-6">
+                    <label className="block text-black mb-3 font-semibold">Select Operation:</label>
+                    <div className="flex gap-4 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setUpdateMode('add')}
+                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          updateMode === 'add'
+                            ? 'bg-green-50 border-green-500 text-green-700'
+                            : 'bg-white border-gray-300 text-black hover:border-gray-400'
+                        }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="font-medium">Add Stock</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUpdateMode('remove')}
+                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          updateMode === 'remove'
+                            ? 'bg-red-50 border-red-500 text-red-700'
+                            : 'bg-white border-gray-300 text-black hover:border-gray-400'
+                        }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                        <span className="font-medium">Remove Stock</span>
+                      </button>
+                    </div>
+
+                    <label className="block text-black mb-2">How many?</label>
+                    <div
+                      onClick={() => {
+                        setActiveInputField('quantity');
+                        setShowQuantityNumpad(true);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        setActiveInputField('quantity');
+                        setShowQuantityNumpad(true);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
+                    >
+                      <span className="text-black">{quantityInput || <span className="text-gray-400">Tap to enter quantity</span>}</span>
+                    </div>
+                    {quantityInput && (
+                      <p className="text-sm mt-2 font-medium">
+                        {updateMode === 'add' ? (
+                          <span className="text-green-600">
+                            New stock will be: {selectedProduct.inventory + parseInt(quantityInput || '0')}
+                          </span>
+                        ) : (
+                          <span className="text-red-600">
+                            New stock will be: {Math.max(0, selectedProduct.inventory - parseInt(quantityInput || '0'))}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   className={`w-full text-white p-3 rounded-lg transition-colors ${
-                    updateMode === 'add'
+                    updateMode === 'reconcile'
+                      ? 'bg-blue-500 hover:bg-blue-600'
+                      : updateMode === 'add'
                       ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-red-500 hover:bg-red-600'
                   }`}
                 >
-                  {updateMode === 'add' ? 'Add to Stock' : 'Remove from Stock'}
+                  {updateMode === 'reconcile' ? 'Update Inventory' : updateMode === 'add' ? 'Add to Stock' : 'Remove from Stock'}
                 </button>
               </form>
             )}
@@ -1507,6 +1766,24 @@ export default function InventoryPage() {
           }}
           decimal={false}
           title="Enter Quantity"
+        />
+      )}
+
+      {showReconcileNumpad && (
+        <OnScreenNumpad
+          value={reconcileCount}
+          onChange={setReconcileCount}
+          onClose={() => {
+            setShowReconcileNumpad(false);
+            setActiveInputField(null);
+          }}
+          onEnter={() => {
+            setShowReconcileNumpad(false);
+            setActiveInputField(null);
+          }}
+          decimal={false}
+          title="Enter Physical Count"
+          subtitle={`Current system count: ${selectedProduct?.inventory || 0}`}
         />
       )}
 
@@ -1694,6 +1971,16 @@ export default function InventoryPage() {
             </button>
           </div>
 
+          {message && (
+            <div className={`mb-4 p-4 rounded-lg ${
+              message.includes('Error') || message.includes('Failed')
+                ? 'bg-red-100 text-red-700'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {message}
+            </div>
+          )}
+
           {/* Verification Modal */}
           {verificationMode && awaitingVerification && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1793,12 +2080,54 @@ export default function InventoryPage() {
           ) : (
             <div className="space-y-4">
               <div className="bg-white rounded-lg shadow-md p-4">
-                <p className="text-lg font-semibold text-black mb-2">
-                  Found {duplicates.length} potential duplicate{duplicates.length === 1 ? '' : 's'}
-                </p>
-                <p className="text-sm text-black">
-                  Review each pair below and decide how to merge them.
-                </p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-lg font-semibold text-black mb-2">
+                      Found {duplicates.length} potential duplicate{duplicates.length === 1 ? '' : 's'}
+                    </p>
+                    <p className="text-sm text-black">
+                      Review each pair below and decide how to merge them.
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!storeId) return;
+
+                      try {
+                        // First, get the count of invalid products
+                        const response = await fetch(`/api/products/cleanup?storeId=${storeId}`);
+                        const data = await response.json();
+
+                        if (data.invalidCount > 0) {
+                          if (confirm(`Found ${data.invalidCount} products with invalid UPCs (very short or single digits). These are likely scan errors. Delete them all?`)) {
+                            const deleteResponse = await fetch('/api/products/cleanup', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ storeId, deleteAll: true })
+                            });
+
+                            if (deleteResponse.ok) {
+                              const result = await deleteResponse.json();
+                              setMessage(result.message);
+                              // Refresh duplicates after cleanup
+                              findDuplicates();
+                              setTimeout(() => setMessage(''), 5000);
+                            }
+                          }
+                        } else {
+                          setMessage('No invalid products found to clean up');
+                          setTimeout(() => setMessage(''), 3000);
+                        }
+                      } catch (error) {
+                        console.error('Error cleaning invalid products:', error);
+                        setMessage('Error cleaning invalid products');
+                      }
+                    }}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm"
+                  >
+                    Clean Invalid Products
+                  </button>
+                </div>
               </div>
 
               {duplicates.map((dup, index) => (
@@ -1841,13 +2170,56 @@ export default function InventoryPage() {
 
                   {/* Similarity Info */}
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-black">
-                      <span className="font-medium">Match Reason:</span>{' '}
-                      {dup.similarity.nameMatch && 'Names match'}
-                      {dup.similarity.nameMatch && dup.similarity.upcSimilar && ' & '}
-                      {dup.similarity.upcSimilar && 'UPCs are similar'}
-                      {dup.similarity.priceDifference > 0 && ` (Price difference: $${dup.similarity.priceDifference.toFixed(2)})`}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm text-black">
+                        <span className="font-medium">Match Type:</span>{' '}
+                        {dup.similarity.similarityType || 'UPCs are similar'}
+                      </p>
+                      {dup.similarity.confidence && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600">Confidence:</span>
+                          <div className="relative w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`absolute left-0 top-0 h-full rounded-full ${
+                                dup.similarity.confidence >= 80 ? 'bg-green-500' :
+                                dup.similarity.confidence >= 60 ? 'bg-yellow-500' :
+                                'bg-orange-500'
+                              }`}
+                              style={{width: `${dup.similarity.confidence}%`}}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${
+                            dup.similarity.confidence >= 80 ? 'text-green-600' :
+                            dup.similarity.confidence >= 60 ? 'text-yellow-600' :
+                            'text-orange-600'
+                          }`}>
+                            {dup.similarity.confidence}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {dup.similarity.upc1Length && dup.similarity.upc2Length && (
+                      <p className="text-xs text-gray-600 mb-1">
+                        UPC lengths: {dup.similarity.upc1Length} vs {dup.similarity.upc2Length} digits
+                      </p>
+                    )}
+
+                    {dup.similarity.nameMatch && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ Product names match exactly
+                      </p>
+                    )}
+                    {!dup.similarity.nameMatch && (
+                      <p className="text-sm text-orange-600 mt-1">
+                        ⚠ Different product names - verify before merging
+                      </p>
+                    )}
+                    {dup.similarity.priceDifference > 0 && (
+                      <p className="text-sm text-black mt-1">
+                        Price difference: ${dup.similarity.priceDifference.toFixed(2)}
+                      </p>
+                    )}
                   </div>
 
                   {/* Merge Actions */}

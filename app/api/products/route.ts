@@ -127,7 +127,7 @@ export async function PUT(req: NextRequest) {
     await connectMongo();
 
     body = await req.json();
-    const { storeId, upc, name, price, cost, inventory, addInventory, updateDetails, userId } = body;
+    const { storeId, upc, name, price, cost, inventory, addInventory, setInventory, updateDetails, userId } = body;
 
     if (!storeId) {
       return NextResponse.json({ error: 'Store ID is required' }, { status: 400 });
@@ -200,6 +200,14 @@ export async function PUT(req: NextRequest) {
         const newInventory = product.inventory + addQty;
         changes.push({ field: 'inventory', oldValue: product.inventory, newValue: newInventory });
         product.inventory = newInventory;
+      }
+      // Handle setInventory for reconciliation (absolute value)
+      if (setInventory !== undefined) {
+        const newInventory = parseInt(setInventory);
+        if (newInventory !== product.inventory) {
+          changes.push({ field: 'inventory', oldValue: product.inventory, newValue: newInventory });
+          product.inventory = newInventory;
+        }
       }
     }
 

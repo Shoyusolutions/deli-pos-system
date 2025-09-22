@@ -10,7 +10,10 @@ interface OnScreenNumpadProps {
   onEnter?: () => void;
   decimal?: boolean;
   title?: string;
+  subtitle?: string;
   maxLength?: number;
+  hidePrefix?: boolean;
+  suffix?: string;
 }
 
 export default function OnScreenNumpad({
@@ -20,7 +23,10 @@ export default function OnScreenNumpad({
   onEnter,
   decimal = true,
   title = 'Enter Amount',
-  maxLength = 10
+  subtitle,
+  maxLength = 10,
+  hidePrefix = false,
+  suffix = ''
 }: OnScreenNumpadProps) {
 
   // Internal state - for currency mode track cents, for integer mode track raw value
@@ -118,22 +124,29 @@ export default function OnScreenNumpad({
     <div className="fixed inset-0 flex items-end justify-center z-[9999] pointer-events-none">
       <div className="bg-white rounded-t-2xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b">
-          <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">{title}</h3>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
-            </button>
+        <div className="flex flex-col mb-3 sm:mb-4 pb-2 border-b">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black">{title}</h3>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
+              </button>
+            )}
+          </div>
+          {subtitle && (
+            <p className="text-sm text-gray-600 mt-1">{subtitle}</p>
           )}
         </div>
 
         {/* Display */}
         <div className="bg-gray-100 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 min-h-[50px] sm:min-h-[60px] md:min-h-[70px] flex items-center justify-end">
           <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black">
-            {decimal ? `$${value || '0.00'}` : (value || '0')}
+            {hidePrefix ? '' : (decimal ? '$' : '')}
+            {value || (decimal ? '0.00' : '0')}
+            {suffix ? ` ${suffix}` : ''}
           </span>
         </div>
 

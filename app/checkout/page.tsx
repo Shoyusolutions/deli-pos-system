@@ -17,6 +17,9 @@ interface Product {
 interface CartItem {
   product: Product;
   quantity: number;
+  weight?: number;
+  isWeightBased?: boolean;
+  pricePerPound?: number;
 }
 
 export default function CheckoutPage() {
@@ -82,6 +85,9 @@ export default function CheckoutPage() {
   const [manualItemPrice, setManualItemPrice] = useState('');
   const [showManualNameKeyboard, setShowManualNameKeyboard] = useState(false);
   const [showManualPriceNumpad, setShowManualPriceNumpad] = useState(false);
+  const [showKeyIn, setShowKeyIn] = useState(false);
+  const [keyInAmount, setKeyInAmount] = useState('');
+  const [showKeyInNumpad, setShowKeyInNumpad] = useState(false);
   const [lookingUpProduct, setLookingUpProduct] = useState(false);
   const [upcDatabaseProduct, setUpcDatabaseProduct] = useState<any>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -94,6 +100,448 @@ export default function CheckoutPage() {
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
   const cashInputRef = useRef<HTMLInputElement>(null);
+
+  // Food selection states
+  const [showFoodSelection, setShowFoodSelection] = useState(false);
+  const [selectedFoodCategory, setSelectedFoodCategory] = useState<string | null>(null);
+  const [foodCart, setFoodCart] = useState<Array<{name: string, price: number, quantity: number, weight?: number, isWeightBased?: boolean, modifiers?: Array<{name: string, price: number}>}>>([]);
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [weightInput, setWeightInput] = useState('');
+  const [selectedWeightItem, setSelectedWeightItem] = useState<{name: string, price: number} | null>(null);
+  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
+  const [showEditWeightModal, setShowEditWeightModal] = useState(false);
+
+  // New states for food options
+  const [showOptionModal, setShowOptionModal] = useState(false);
+  const [selectedBaseItem, setSelectedBaseItem] = useState<any | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<{[key: string]: string}>({});
+  const [multiSelectOptions, setMultiSelectOptions] = useState<{[key: string]: number}>({});
+
+  // States for modifiers/add-ons
+  const [showModifierModal, setShowModifierModal] = useState(false);
+  const [selectedCartItem, setSelectedCartItem] = useState<{name: string, price: number, quantity: number, modifiers?: any[]} | null>(null);
+  const [selectedModifiers, setSelectedModifiers] = useState<{[key: string]: number}>({});
+
+  // Optimized food menu structure
+  const foodMenuOptimized = {
+    'COLD CUTS SANDWICHES': [
+      { name: 'Roast Beef', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Pastrami', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Chipotle Chicken', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Honey Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Oven Gold Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } }
+    ],
+    'SANDWICHES': [
+      { name: 'Chicken Cutlet', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Spicy Chicken Cutlet', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Philly Cheesesteak', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 9.99, hero: 10.99 } },
+      { name: 'Chopped Cheese', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Grilled Chicken', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } }
+    ],
+    'BREAKFAST': [
+      { name: 'Egg & Cheese', price: 4.99, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Bacon Egg & Cheese', price: 5.99, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Turkey Sausage Egg & Cheese', price: 5.99, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Roast Beef Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Pastrami Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Chicken Cutlet Egg & Cheese', price: 7.99, requiresOptions: true, optionType: 'breakfast-bread-no-bagel' },
+    ],
+    'OMELETTES': [
+      { name: 'Mexican Omelette', price: 7.99, requiresOptions: false },
+      { name: 'Veggie Omelette', price: 7.99, requiresOptions: false },
+      { name: 'Create Your Own Omelette', price: 7.99, requiresOptions: true, optionType: 'omelette-veggies' },
+    ],
+    'BAGELS': [
+      { name: 'Bagel with Cream Cheese', price: 3.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Grape Jelly', price: 3.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Egg & Cheese', price: 4.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Bacon Egg & Cheese', price: 5.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Turkey Sausage Egg & Cheese', price: 5.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Roast Beef Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'bagel-type' },
+      { name: 'Bagel with Pastrami Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'bagel-type' },
+    ],
+    'BURGERS': [
+      { name: 'American Cheese Burger', price: 7.99, requiresOptions: false },
+      { name: 'Chicken Cheese Burger', price: 7.99, requiresOptions: false },
+      { name: 'Turkey Burger', price: 7.99, requiresOptions: false },
+    ],
+    'PLATTERS': [
+      { name: 'Chicken Over Rice', price: 9.99, requiresOptions: true, optionType: 'platter-sauce' },
+      { name: 'Lamb Over Rice', price: 9.99, requiresOptions: true, optionType: 'platter-sauce' },
+      { name: 'Grilled Chicken Over Rice', price: 9.99, requiresOptions: true, optionType: 'platter-sauce' },
+      { name: 'Crispy Chicken Over Rice', price: 9.99, requiresOptions: true, optionType: 'platter-sauce' },
+    ],
+    'GYRO': [
+      { name: 'Chicken Gyro', price: 8.99, requiresOptions: true, optionType: 'gyro-sauce' },
+      { name: 'Lamb Gyro', price: 8.99, requiresOptions: true, optionType: 'gyro-sauce' },
+      { name: 'Grilled Chicken Gyro', price: 8.99, requiresOptions: true, optionType: 'gyro-sauce' },
+      { name: 'Crispy Chicken Gyro', price: 8.99, requiresOptions: true, optionType: 'gyro-sauce' },
+    ],
+    'TENDERS': [
+      { name: 'Tenders (Regular)', prices: {'3 pcs': 5.99, '5 pcs': 9.99, '8 pcs': 12.99, '12 pcs': 16.99}, requiresOptions: true, optionType: 'tender-size' },
+      { name: 'Spicy Tenders', prices: {'3 pcs': 5.99, '5 pcs': 9.99, '8 pcs': 12.99, '12 pcs': 16.99}, requiresOptions: true, optionType: 'tender-size' },
+    ],
+    'NUGGETS': [
+      { name: 'Nuggets', prices: {'4 pcs': 3.99, '6 pcs': 4.99, '10 pcs': 6.99, '20 pcs': 10.99}, requiresOptions: true, optionType: 'nugget-size' },
+    ],
+    'WINGS': [
+      { name: 'Wings (Regular)', prices: {'4 pcs': 8.49, '6 pcs': 9.49, '9 pcs': 12.99, '12 pcs': 18.99}, requiresOptions: true, optionType: 'wing-size' },
+      { name: 'Spicy Wings', prices: {'4 pcs': 8.49, '6 pcs': 9.49, '9 pcs': 12.99, '12 pcs': 18.99}, requiresOptions: true, optionType: 'wing-size' },
+    ],
+    'PANINIS': [
+      { name: 'Roast Beef Panini', price: 9.99, requiresOptions: false },
+      { name: 'Turkey Panini', price: 9.99, requiresOptions: false },
+      { name: 'Grilled Chicken Panini', price: 9.99, requiresOptions: false },
+      { name: 'Chipotle Chicken Panini', price: 9.99, requiresOptions: false },
+      { name: 'Buffalo Chicken Panini', price: 9.99, requiresOptions: false },
+      { name: 'BBQ Chicken Panini', price: 9.99, requiresOptions: false },
+    ],
+    'QUESADILLA': [
+      { name: 'Grilled Chicken Quesadilla', price: 9.99, requiresOptions: false },
+      { name: 'Chipotle Chicken Quesadilla', price: 9.99, requiresOptions: false },
+      { name: 'Buffalo Chicken Quesadilla', price: 9.99, requiresOptions: false },
+      { name: 'BBQ Chicken Quesadilla', price: 9.99, requiresOptions: false },
+      { name: 'Vegetable Quesadilla', price: 9.99, requiresOptions: false },
+    ],
+    'SALADS': [
+      { name: 'Build Your Own Salad', price: 6.99, requiresOptions: true, optionType: 'salad-toppings' },
+    ],
+    'SIDES': [
+      { name: 'French Fries', price: 4.99, requiresOptions: false },
+      { name: 'Seasoned Fries', price: 5.99, requiresOptions: false },
+      { name: 'Onion Rings', price: 5.99, requiresOptions: false },
+      { name: 'Mozzarella Sticks (5 pcs)', price: 5.99, requiresOptions: false },
+      { name: 'Beef Patty', price: 3.99, requiresOptions: false },
+    ],
+    'JUICES': [
+      { name: 'Orange Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Beet Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Carrot Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Celery Apple Spinach Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Lemon Apple Ginger', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Cucumber Apple Celery', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Detox', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size' },
+      { name: 'Create Your Own Juice', prices: {small: 6.99, large: 7.99}, requiresOptions: true, optionType: 'juice-size-custom' },
+    ],
+    'PASTRY': [
+      { name: 'Pastry', price: 2.50, requiresOptions: false },
+    ],
+  };
+
+  // Option configurations
+  const optionConfigs: {[key: string]: {title: string, options: string[], multiSelect?: boolean, maxFree?: number, extraCharge?: number}} = {
+    'breakfast-bread': {
+      title: 'Choose Bread',
+      options: ['Roll', 'White Bread', 'Wheat Bread']
+    },
+    'breakfast-bread-no-bagel': {
+      title: 'Choose Bread',
+      options: ['Roll', 'White Bread', 'Wheat Bread']
+    },
+    'breakfast-bread-limited': {
+      title: 'Choose Bread',
+      options: ['White Bread', 'Wheat Bread']
+    },
+    'bagel-type': {
+      title: 'Choose Bagel',
+      options: ['Plain', 'Raisin', 'Wheat', 'Everything', 'Sesame']
+    },
+    'roll-hero': {
+      title: 'Choose Size',
+      options: ['Roll', 'Hero']
+    },
+    'tender-size': {
+      title: 'Choose Size',
+      options: ['3 pcs', '5 pcs', '8 pcs', '12 pcs']
+    },
+    'nugget-size': {
+      title: 'Choose Size',
+      options: ['4 pcs', '6 pcs', '10 pcs', '20 pcs']
+    },
+    'wing-size': {
+      title: 'Choose Size',
+      options: ['4 pcs', '6 pcs', '9 pcs', '12 pcs']
+    },
+    'omelette-veggies': {
+      title: 'Choose 3 Vegetables ($1.50 for each extra)',
+      options: ['Onions', 'Green Peppers', 'Jalapeños', 'Mushrooms', 'Tomatoes', 'Spinach'],
+      multiSelect: true,
+      maxFree: 3,
+      extraCharge: 1.50
+    },
+    'salad-toppings': {
+      title: 'Choose Your Toppings (4 free, $1.00 for each extra)',
+      options: ['Lettuce', 'Tomatoes', 'Cucumbers', 'Onions', 'Carrots', 'Peppers', 'Corn', 'Croutons', 'Cheese'],
+      multiSelect: true,
+      maxFree: 4,
+      extraCharge: 1.00
+    },
+    'salad-dressing': {
+      title: 'Choose Dressing',
+      options: ['Ranch', 'Caesar', 'Italian', 'Blue Cheese', 'Honey Mustard', 'Balsamic Vinaigrette', 'No Dressing']
+    },
+    'platter-sauce': {
+      title: 'Choose Sauce',
+      options: ['White Sauce', 'Hot Sauce', 'BBQ Sauce', 'No Sauce']
+    },
+    'gyro-sauce': {
+      title: 'Choose Sauce',
+      options: ['White Sauce', 'Hot Sauce', 'BBQ Sauce', 'No Sauce']
+    },
+    'salad-dressing-old': {
+      title: 'Choose Dressing',
+      options: ['Ranch', 'Caesar', 'Blue Cheese', 'Honey Mustard', 'Italian', 'No Dressing']
+    },
+    'juice-size': {
+      title: 'Choose Size',
+      options: ['Small', 'Large']
+    },
+    'juice-size-custom': {
+      title: 'Choose Size',
+      options: ['Small', 'Large']
+    },
+    'juice-custom-small': {
+      title: 'Choose Your Ingredients (4 included, $1.50 for each extra)',
+      options: ['Apple', 'Orange', 'Carrot', 'Beet', 'Celery', 'Cucumber', 'Ginger', 'Lemon', 'Spinach', 'Kale', 'Pineapple', 'Watermelon'],
+      multiSelect: true,
+      maxFree: 4,
+      extraCharge: 1.50
+    },
+    'juice-custom-large': {
+      title: 'Choose Your Ingredients (7 included, $1.50 for each extra)',
+      options: ['Apple', 'Orange', 'Carrot', 'Beet', 'Celery', 'Cucumber', 'Ginger', 'Lemon', 'Spinach', 'Kale', 'Pineapple', 'Watermelon'],
+      multiSelect: true,
+      maxFree: 7,
+      extraCharge: 1.50
+    },
+  };
+
+  // Modifier configurations for different item types
+  const modifierConfigs = {
+    breakfast: [
+      { name: 'Extra Egg', price: 1.50 },
+      { name: 'Extra Cheese', price: 1.00 },
+      { name: 'Extra Bacon', price: 2.00 },
+      { name: 'Add Avocado', price: 2.50 },
+      { name: 'Add Hash Brown', price: 2.00 },
+    ],
+    omelette: [
+      { name: 'Extra Egg', price: 1.50 },
+      { name: 'Extra Veggies', price: 1.50 },
+      { name: 'Add Meat', price: 3.00 },
+      { name: 'Extra Cheese', price: 1.00 },
+    ],
+    salad: [
+      { name: 'Add Chicken', price: 3.00 },
+      { name: 'Add Grilled Chicken', price: 3.00 },
+      { name: 'Add Lamb', price: 3.00 },
+      { name: 'Add Crispy Chicken', price: 3.00 },
+    ],
+    sandwich: [
+      { name: 'Extra Meat', price: 3.00 },
+      { name: 'Extra Cheese', price: 1.00 },
+      { name: 'Add Bacon', price: 2.00 },
+      { name: 'Add Avocado', price: 2.50 },
+      { name: 'Make it a Combo (+Fries & Drink)', price: 4.00 },
+    ],
+    burger: [
+      { name: 'Extra Patty', price: 3.00 },
+      { name: 'Extra Cheese', price: 1.00 },
+      { name: 'Add Bacon', price: 2.00 },
+      { name: 'Add Avocado', price: 2.50 },
+      { name: 'Make it a Combo (+Fries & Drink)', price: 4.00 },
+    ],
+    sides: [
+      { name: 'Extra Sauce', price: 0.50 },
+      { name: 'Make it Large', price: 2.00 },
+    ],
+  };
+
+  // Helper to determine modifier type from item name
+  const getModifierType = (itemName: string): string => {
+    const name = itemName.toLowerCase();
+    if (name.includes('egg') && name.includes('cheese')) return 'breakfast';
+    if (name.includes('omelette') || name.includes('omelet')) return 'omelette';
+    if (name.includes('burger')) return 'burger';
+    if (name.includes('salad')) return 'salad';
+    if (name.includes('chicken') || name.includes('beef') || name.includes('turkey') ||
+        name.includes('pastrami') || name.includes('philly') || name.includes('chopped')) return 'sandwich';
+    if (name.includes('fries') || name.includes('rings') || name.includes('mozzarella')) return 'sides';
+    return 'sandwich'; // default
+  };
+
+  // Food menu data structure (keep original for non-optimized items)
+  const foodMenu = {
+    'BREAKFAST': [
+      { name: 'Egg & Cheese (Roll)', price: 4.99 },
+      { name: 'Egg & Cheese (White Bread)', price: 4.99 },
+      { name: 'Egg & Cheese (Wheat Bread)', price: 4.99 },
+      { name: 'Bacon Egg & Cheese (Roll)', price: 5.99 },
+      { name: 'Bacon Egg & Cheese (White Bread)', price: 5.99 },
+      { name: 'Bacon Egg & Cheese (Wheat Bread)', price: 5.99 },
+      { name: 'Turkey Sausage Egg & Cheese (Roll)', price: 5.99 },
+      { name: 'Turkey Sausage Egg & Cheese (White Bread)', price: 5.99 },
+      { name: 'Turkey Sausage Egg & Cheese (Wheat Bread)', price: 5.99 },
+      { name: 'Roast Beef Egg & Cheese (Roll)', price: 8.99 },
+      { name: 'Roast Beef Egg & Cheese (White Bread)', price: 8.99 },
+      { name: 'Roast Beef Egg & Cheese (Wheat Bread)', price: 8.99 },
+      { name: 'Pastrami Egg & Cheese (Roll)', price: 8.99 },
+      { name: 'Pastrami Egg & Cheese (White Bread)', price: 8.99 },
+      { name: 'Pastrami Egg & Cheese (Wheat Bread)', price: 8.99 },
+      { name: 'Chicken Cutlet Egg & Cheese (White Bread)', price: 7.99 },
+      { name: 'Chicken Cutlet Egg & Cheese (Wheat Bread)', price: 7.99 }
+    ],
+    'OMELETTES': [
+      { name: 'Mexican Omelette', price: 7.99 },
+      { name: 'Veggie Omelette', price: 7.99 },
+      { name: 'Create Your Own Omelette', price: 7.99 },
+      { name: 'Extra Egg', price: 1.50 },
+      { name: 'Extra Veggies', price: 1.50 },
+      { name: 'Add Vegetables', price: 1.50 },
+      { name: 'Add Meat', price: 3.00 }
+    ],
+    'BAGELS': [
+      { name: 'Bagel with Cream Cheese (Plain)', price: 3.99 },
+      { name: 'Bagel with Cream Cheese (Raisin)', price: 3.99 },
+      { name: 'Bagel with Cream Cheese (Wheat)', price: 3.99 },
+      { name: 'Bagel with Cream Cheese (Everything)', price: 3.99 },
+      { name: 'Bagel with Cream Cheese (Sesame)', price: 3.99 },
+      { name: 'Bagel with Grape Jelly (Plain)', price: 3.99 },
+      { name: 'Bagel with Grape Jelly (Raisin)', price: 3.99 },
+      { name: 'Bagel with Grape Jelly (Wheat)', price: 3.99 },
+      { name: 'Bagel with Grape Jelly (Everything)', price: 3.99 },
+      { name: 'Bagel with Grape Jelly (Sesame)', price: 3.99 },
+      { name: 'Bagel with Egg & Cheese (Plain)', price: 4.99 },
+      { name: 'Bagel with Egg & Cheese (Raisin)', price: 4.99 },
+      { name: 'Bagel with Egg & Cheese (Wheat)', price: 4.99 },
+      { name: 'Bagel with Egg & Cheese (Everything)', price: 4.99 },
+      { name: 'Bagel with Egg & Cheese (Sesame)', price: 4.99 },
+      { name: 'Bagel with Bacon Egg & Cheese (Plain)', price: 5.99 },
+      { name: 'Bagel with Bacon Egg & Cheese (Everything)', price: 5.99 },
+      { name: 'Bagel with Turkey Sausage Egg & Cheese (Plain)', price: 5.99 },
+      { name: 'Bagel with Turkey Sausage Egg & Cheese (Everything)', price: 5.99 },
+      { name: 'Bagel with Roast Beef Egg & Cheese (Plain)', price: 8.99 },
+      { name: 'Bagel with Pastrami Egg & Cheese (Plain)', price: 8.99 }
+    ],
+    'COLD CUTS SANDWICHES': [
+      { name: 'Roast Beef', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Pastrami', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Chipotle Chicken', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Honey Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Oven Gold Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } }
+    ],
+    'SANDWICHES': [
+      { name: 'Chicken Cutlet', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Spicy Chicken Cutlet', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Philly Cheesesteak', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 9.99, hero: 10.99 } },
+      { name: 'Chopped Cheese', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
+      { name: 'Grilled Chicken', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } }
+    ],
+    'BURGERS': [
+      { name: 'American Cheese Burger', price: 7.99 },
+      { name: 'Chicken Cheese Burger', price: 7.99 },
+      { name: 'Turkey Burger', price: 7.99 }
+    ],
+    'PLATTERS': [
+      { name: 'Chicken Over Rice', price: 9.99 },
+      { name: 'Lamb Over Rice', price: 9.99 },
+      { name: 'Grilled Chicken Over Rice', price: 9.99 },
+      { name: 'Crispy Chicken Over Rice', price: 9.99 }
+    ],
+    'GYRO': [
+      { name: 'Chicken Gyro', price: 8.99 },
+      { name: 'Lamb Gyro', price: 8.99 },
+      { name: 'Grilled Chicken Gyro', price: 8.99 },
+      { name: 'Crispy Chicken Gyro', price: 8.99 }
+    ],
+    'SALADS': [
+      { name: 'Build Your Own Salad', price: 6.99 }
+    ],
+    'SIDES': [
+      { name: 'French Fries', price: 4.99 },
+      { name: 'Seasoned Fries', price: 5.99 },
+      { name: 'Onion Rings', price: 5.99 },
+      { name: 'Mozzarella Sticks (5 pcs)', price: 5.99 },
+      { name: 'Beef Patty', price: 3.99 }
+    ],
+    'TENDERS': [
+      { name: 'Tenders (3 pcs)', price: 5.99 },
+      { name: 'Tenders (5 pcs)', price: 9.99 },
+      { name: 'Tenders (8 pcs)', price: 12.99 },
+      { name: 'Tenders (12 pcs)', price: 16.99 },
+      { name: 'Spicy Tenders (3 pcs)', price: 5.99 },
+      { name: 'Spicy Tenders (5 pcs)', price: 9.99 },
+      { name: 'Spicy Tenders (8 pcs)', price: 12.99 },
+      { name: 'Spicy Tenders (12 pcs)', price: 16.99 }
+    ],
+    'NUGGETS': [
+      { name: 'Nuggets (4 pcs)', price: 3.99 },
+      { name: 'Nuggets (6 pcs)', price: 4.99 },
+      { name: 'Nuggets (10 pcs)', price: 6.99 },
+      { name: 'Nuggets (20 pcs)', price: 10.99 }
+    ],
+    'WINGS': [
+      { name: 'Wings (4 pcs)', price: 8.49 },
+      { name: 'Wings (6 pcs)', price: 9.49 },
+      { name: 'Wings (9 pcs)', price: 12.99 },
+      { name: 'Wings (12 pcs)', price: 18.99 },
+      { name: 'Spicy Wings (4 pcs)', price: 8.49 },
+      { name: 'Spicy Wings (6 pcs)', price: 9.49 },
+      { name: 'Spicy Wings (9 pcs)', price: 12.99 },
+      { name: 'Spicy Wings (12 pcs)', price: 18.99 }
+    ],
+    'PANINIS': [
+      { name: 'Roast Beef Panini', price: 9.99 },
+      { name: 'Turkey Panini', price: 9.99 },
+      { name: 'Grilled Chicken Panini', price: 9.99 },
+      { name: 'Chipotle Chicken Panini', price: 9.99 },
+      { name: 'Buffalo Chicken Panini', price: 9.99 },
+      { name: 'BBQ Chicken Panini', price: 9.99 }
+    ],
+    'QUESADILLA': [
+      { name: 'Grilled Chicken Quesadilla', price: 9.99 },
+      { name: 'Chipotle Chicken Quesadilla', price: 9.99 },
+      { name: 'Buffalo Chicken Quesadilla', price: 9.99 },
+      { name: 'BBQ Chicken Quesadilla', price: 9.99 },
+      { name: 'Vegetable Quesadilla', price: 9.99 }
+    ],
+    'JUICES': [
+      { name: 'Orange Juice (Small)', price: 6.99 },
+      { name: 'Orange Juice (Large)', price: 7.99 },
+      { name: 'Beet Juice (Small)', price: 6.99 },
+      { name: 'Beet Juice (Large)', price: 7.99 },
+      { name: 'Carrot Juice (Small)', price: 6.99 },
+      { name: 'Carrot Juice (Large)', price: 7.99 },
+      { name: 'Celery Apple Spinach Juice (Small)', price: 6.99 },
+      { name: 'Celery Apple Spinach Juice (Large)', price: 7.99 },
+      { name: 'Lemon Apple Ginger (Small)', price: 6.99 },
+      { name: 'Lemon Apple Ginger (Large)', price: 7.99 },
+      { name: 'Cucumber Apple Celery (Small)', price: 6.99 },
+      { name: 'Cucumber Apple Celery (Large)', price: 7.99 },
+      { name: 'Detox (Small)', price: 6.99 },
+      { name: 'Detox (Large)', price: 7.99 },
+      { name: 'Create Your Own Juice (Small)', price: 6.99 },
+      { name: 'Create Your Own Juice (Large)', price: 7.99 }
+    ],
+    'CHEESE (By the Pound)': [
+      { name: 'American Cheese (1 lb)', price: 9.99 },
+      { name: 'Muenster Cheese (1 lb)', price: 9.99 },
+      { name: 'Pepper Jack Cheese (1 lb)', price: 9.99 },
+      { name: 'Mozzarella Cheese (1 lb)', price: 9.99 },
+      { name: 'Swiss Cheese (1 lb)', price: 9.99 },
+      { name: 'Provolone Cheese (1 lb)', price: 9.99 }
+    ],
+    'COLD CUTS (By the Pound)': [
+      { name: 'Roast Beef (1 lb)', price: 15.99 },
+      { name: 'Pastrami (1 lb)', price: 15.99 },
+      { name: 'Chipotle Chicken (1 lb)', price: 13.99 },
+      { name: 'Honey Turkey (1 lb)', price: 13.99 },
+      { name: 'Oven Gold Turkey (1 lb)', price: 13.99 }
+    ],
+    'PASTRY': [
+      { name: 'Pastry', price: 2.50 }
+    ]
+  };
 
   // Helper function to handle price input changes
   const handlePriceInput = (inputValue: string, setPriceState: (val: string) => void, setDisplayState: (val: string) => void) => {
@@ -232,7 +680,7 @@ export default function CheckoutPage() {
       }
 
       // Check if we should block scanning
-      if (notFoundUpc || showManualKeyIn || showAddProduct) {
+      if (notFoundUpc || showManualKeyIn || showKeyIn || showAddProduct) {
         // If it looks like a scan attempt (numbers or Enter with buffer)
         if ((e.key >= '0' && e.key <= '9') || (e.key === 'Enter' && scanBuffer.length > 0)) {
           e.preventDefault();
@@ -284,7 +732,7 @@ export default function CheckoutPage() {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [paymentMode, showManualEntry, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showAddProduct, message]);
+  }, [paymentMode, showManualEntry, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message]);
 
   const handleScanComplete = async (upc: string) => {
     if (!upc || !storeId) return;
@@ -459,6 +907,247 @@ export default function CheckoutPage() {
     setManualItemName('');
     setManualItemPrice('');
     setTimeout(() => setMessage(''), 7000);
+  };
+
+  // Handle adding optimized food item (with options)
+  const handleOptimizedFoodClick = (item: any) => {
+    if (item.requiresOptions) {
+      // Open option selection modal
+      // For items with prices object, set a default price
+      const defaultPrice = item.price || (item.prices ? Object.values(item.prices)[0] : 0);
+      setSelectedBaseItem({...item, price: defaultPrice});
+      setSelectedOptions({});
+      setShowOptionModal(true);
+    } else {
+      // Direct add for items without options
+      handleFoodItemClick({name: item.name, price: item.price});
+    }
+  };
+
+  // Handle option selection confirmation
+  const handleOptionConfirm = () => {
+    if (!selectedBaseItem) return;
+
+    const config = optionConfigs[selectedBaseItem.optionType as keyof typeof optionConfigs];
+    const selectedOption = selectedOptions[selectedBaseItem.optionType];
+
+    if (!selectedOption) {
+      setMessage('Please select an option');
+      setTimeout(() => setMessage(''), 2000);
+      return;
+    }
+
+    // Construct the full item name with options
+    let fullName = selectedBaseItem.name;
+    let finalPrice = selectedBaseItem.price || 0;
+
+    // Handle different option types
+    if (selectedBaseItem.optionType === 'roll-hero') {
+      const size = selectedOption.toLowerCase();
+      fullName = `${selectedBaseItem.name} (${selectedOption})`;
+      finalPrice = selectedBaseItem.prices[size];
+    } else if (selectedBaseItem.optionType.includes('size')) {
+      fullName = `${selectedBaseItem.name} (${selectedOption})`;
+      finalPrice = selectedBaseItem.prices[selectedOption];
+    } else if (selectedBaseItem.optionType.includes('breakfast-bread')) {
+      fullName = `${selectedBaseItem.name} (${selectedOption})`;
+      finalPrice = selectedBaseItem.price;
+    } else if (selectedBaseItem.optionType === 'bagel-type') {
+      fullName = `${selectedBaseItem.name} (${selectedOption})`;
+      finalPrice = selectedBaseItem.price;
+    }
+
+    // Add to food cart
+    const existingItem = foodCart.find(cartItem => cartItem.name === fullName);
+    if (existingItem) {
+      setFoodCart(foodCart.map(cartItem =>
+        cartItem.name === fullName
+          ? {...cartItem, quantity: cartItem.quantity + 1}
+          : cartItem
+      ));
+    } else {
+      setFoodCart([...foodCart, {name: fullName, price: finalPrice, quantity: 1}]);
+    }
+
+    // Close modal and reset
+    setShowOptionModal(false);
+    setSelectedBaseItem(null);
+    setSelectedOptions({});
+    setSelectedCartItem(null);
+  };
+
+  // Handle adding food item to temporary food cart
+  const handleFoodItemClick = (item: {name: string, price: number}) => {
+    // Check if this is a weight-based item (by the pound)
+    const isWeightBased = selectedFoodCategory === 'CHEESE (By the Pound)' ||
+                          selectedFoodCategory === 'COLD CUTS (By the Pound)';
+
+    if (isWeightBased) {
+      // Open weight input modal for by-the-pound items
+      setSelectedWeightItem(item);
+      setWeightInput('');
+      setShowWeightModal(true);
+    } else {
+      // Regular quantity-based item
+      const existingItem = foodCart.find(cartItem => cartItem.name === item.name);
+      if (existingItem) {
+        // Increase quantity if item already exists
+        setFoodCart(foodCart.map(cartItem =>
+          cartItem.name === item.name
+            ? {...cartItem, quantity: cartItem.quantity + 1}
+            : cartItem
+        ));
+      } else {
+        // Add new item with quantity 1
+        setFoodCart([...foodCart, {name: item.name, price: item.price, quantity: 1}]);
+      }
+    }
+  };
+
+  // Handle weight submission for by-the-pound items
+  const handleWeightSubmit = () => {
+    if (!selectedWeightItem || !weightInput) return;
+
+    const weight = parseFloat(weightInput);
+    if (isNaN(weight) || weight <= 0) {
+      setMessage('Please enter a valid weight');
+      setTimeout(() => setMessage(''), 2000);
+      return;
+    }
+
+    // Calculate total price based on weight (price is per pound)
+    const totalPrice = selectedWeightItem.price * weight;
+
+    const existingItem = foodCart.find(cartItem => cartItem.name === selectedWeightItem.name);
+    if (existingItem) {
+      // Update weight for existing item
+      setFoodCart(foodCart.map(cartItem =>
+        cartItem.name === selectedWeightItem.name
+          ? {...cartItem, weight: weight, quantity: 1, isWeightBased: true}
+          : cartItem
+      ));
+    } else {
+      // Add new weight-based item
+      setFoodCart([...foodCart, {
+        name: selectedWeightItem.name,
+        price: selectedWeightItem.price,
+        quantity: 1,
+        weight: weight,
+        isWeightBased: true
+      }]);
+    }
+
+    // Close modal and reset
+    setShowWeightModal(false);
+    setWeightInput('');
+    setSelectedWeightItem(null);
+  };
+
+  // Handle removing/decreasing food item quantity
+  const handleFoodItemDecrease = (item: {name: string, price: number}) => {
+    const existingItem = foodCart.find(cartItem => cartItem.name === item.name);
+    if (existingItem) {
+      if (existingItem.quantity > 1) {
+        // Decrease quantity
+        setFoodCart(foodCart.map(cartItem =>
+          cartItem.name === item.name
+            ? {...cartItem, quantity: cartItem.quantity - 1}
+            : cartItem
+        ));
+      } else {
+        // Remove item from cart
+        setFoodCart(foodCart.filter(cartItem => cartItem.name !== item.name));
+      }
+    }
+  };
+
+  // Handle Done button - add all food items to main cart
+  const handleFoodDone = () => {
+    // Only proceed if there are items to add
+    if (foodCart.length === 0) {
+      setShowFoodSelection(false);
+      return;
+    }
+
+    // Create a new cart array with all food items added
+    let newCart = [...cart];
+
+    foodCart.forEach(foodItem => {
+      // Calculate total price including modifiers
+      const modifierTotal = foodItem.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+
+      // For weight-based items, calculate total price
+      const itemPrice = foodItem.isWeightBased
+        ? (foodItem.price * (foodItem.weight || 0)) + modifierTotal
+        : foodItem.price + modifierTotal;
+
+      // Build item name with modifiers and weight
+      let itemName = foodItem.name;
+      if (foodItem.isWeightBased && foodItem.weight) {
+        itemName = `${foodItem.name} (${foodItem.weight} lbs)`;
+      }
+      if (foodItem.modifiers && foodItem.modifiers.length > 0) {
+        // Group modifiers by name and count
+        const modifierCounts: {[key: string]: number} = {};
+        foodItem.modifiers.forEach(mod => {
+          modifierCounts[mod.name] = (modifierCounts[mod.name] || 0) + 1;
+        });
+
+        const modifierText = Object.entries(modifierCounts)
+          .map(([name, count]) => count > 1 ? `${count}x ${name}` : name)
+          .join(', ');
+        itemName = foodItem.isWeightBased && foodItem.weight
+          ? `${foodItem.name} (${foodItem.weight} lbs, ${modifierText})`
+          : `${foodItem.name} (${modifierText})`;
+      }
+
+      // Create temporary product for each food item
+      const tempProduct: Product = {
+        _id: `food_${Date.now()}_${Math.random()}`,
+        upc: `FOOD_${Date.now()}_${Math.random()}`,
+        name: itemName,
+        price: itemPrice,
+        inventory: 999
+      };
+
+      // Check if the item already exists in cart (including modifiers)
+      const existingIndex = newCart.findIndex(item => item.product.name === itemName);
+
+      if (existingIndex !== -1) {
+        // Update quantity of existing item
+        newCart[existingIndex] = {
+          ...newCart[existingIndex],
+          quantity: newCart[existingIndex].quantity + foodItem.quantity
+        };
+      } else {
+        // Add new item to cart with weight information if applicable
+        const cartItem: CartItem = {
+          product: tempProduct,
+          quantity: foodItem.quantity
+        };
+
+        if (foodItem.isWeightBased) {
+          cartItem.weight = foodItem.weight;
+          cartItem.isWeightBased = true;
+          cartItem.pricePerPound = foodItem.price;
+        }
+
+        newCart.push(cartItem);
+      }
+    });
+
+    // Update cart state once with all items
+    setCart(newCart);
+
+    // Show success message
+    const totalItems = foodCart.reduce((sum, item) => sum + item.quantity, 0);
+    setMessage(`✓ Added ${totalItems} food item${totalItems > 1 ? 's' : ''} to cart`);
+
+    // Reset food selection only after successful addition
+    setShowFoodSelection(false);
+    setSelectedFoodCategory(null);
+    setFoodCart([]); // Clear the food cart only after items are added
+    setTimeout(() => setMessage(''), 3000);
   };
 
   const handleAddNewProduct = async (e: React.FormEvent) => {
@@ -1243,6 +1932,18 @@ export default function CheckoutPage() {
         />
       )}
 
+      {/* On-Screen Numpad for Key in Amount */}
+      {showKeyInNumpad && (
+        <OnScreenNumpad
+          value={keyInAmount}
+          onChange={setKeyInAmount}
+          onClose={() => setShowKeyInNumpad(false)}
+          onEnter={() => setShowKeyInNumpad(false)}
+          decimal={true}
+          title="Enter Amount"
+        />
+      )}
+
       {/* Payment Method Selection Modal */}
       {paymentMode === 'payment' && (
         <div className="fixed inset-0 bg-gray-200 bg-opacity-80 flex items-center justify-center z-50">
@@ -1341,62 +2042,52 @@ export default function CheckoutPage() {
                       <span className="text-xs font-mono text-black hidden sm:inline">{scanBuffer}</span>
                     )}
                   </div>
-                  <div className="flex gap-2 sm:gap-3">
+                  <div className="flex justify-between items-center gap-6 px-2 py-1">
                     <button
                       onClick={() => {
                         setShowManualEntry(true);
                         setTimeout(() => manualInputRef.current?.focus(), 100);
                       }}
-                      className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                      className="text-blue-600 hover:text-blue-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition-colors text-sm font-medium"
                     >
-                      <Keyboard className="w-3 sm:w-4 h-3 sm:h-4" />
-                      <span className="hidden sm:inline">Enter UPC</span>
-                      <span className="sm:hidden">UPC</span>
+                      <Keyboard className="w-4 h-4" />
+                      <span>Enter UPC</span>
                     </button>
                     <button
                       onClick={() => {
                         setShowManualKeyIn(true);
                       }}
-                      className="text-xs sm:text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
+                      className="text-green-600 hover:text-green-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 hover:bg-green-100 active:bg-green-200 transition-colors text-sm font-medium"
                     >
-                      <Plus className="w-3 sm:w-4 h-3 sm:h-4" />
-                      <span className="hidden sm:inline">Manual Item</span>
-                      <span className="sm:hidden">Manual</span>
+                      <Plus className="w-4 h-4" />
+                      <span>Manual Item</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowKeyIn(true);
+                      }}
+                      className="text-orange-600 hover:text-orange-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-colors text-sm font-medium"
+                    >
+                      <span className="text-lg">🔢</span>
+                      <span>Key in</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowFoodSelection(true);
+                        setSelectedFoodCategory(null);
+                        // Don't clear foodCart - preserve previous selections
+                      }}
+                      className="text-blue-600 hover:text-blue-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition-colors text-sm font-medium"
+                    >
+                      <span className="text-lg">🍔</span>
+                      <span>FOOD</span>
+                      {foodCart.length > 0 && (
+                        <span>({foodCart.reduce((sum, item) => sum + item.quantity, 0)})</span>
+                      )}
                     </button>
                   </div>
                 </div>
 
-                {/* Last Scanned Item Display - Responsive height */}
-                <div className="h-[60px] sm:h-[70px] md:h-[80px] flex items-center justify-center px-2">
-                  {message && message.includes('Added:') ? (
-                    <div className="flex items-center gap-2 sm:gap-3 animate-fadeIn w-full">
-                      <div className="text-green-600 flex-shrink-0">
-                        <svg className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {(() => {
-                          const parts = message.replace('✓ Added: ', '').split(' - $');
-                          return (
-                            <div>
-                              <p className="text-sm sm:text-base font-semibold text-black truncate">{parts[0]}</p>
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-lg sm:text-xl font-bold text-green-600">${parts[1]}</span>
-                                <span className="text-xs text-black">Added to cart</span>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center text-black">
-                      <Package className="w-10 sm:w-11 md:w-12 h-10 sm:h-11 md:h-12 mx-auto mb-1" />
-                      <p className="text-xs sm:text-sm">Waiting for scan...</p>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -1452,6 +2143,80 @@ export default function CheckoutPage() {
                       setShowManualKeyIn(false);
                       setManualItemName('');
                       setManualItemPrice('');
+                    }}
+                    className="px-4 py-2 text-black hover:text-black text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {paymentMode === 'idle' && showKeyIn && (
+              <div className="bg-white p-4 rounded-xl shadow-sm mb-3 flex-shrink-0">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-medium text-black">Key in Amount</h3>
+                  <button
+                    onClick={() => {
+                      setShowKeyIn(false);
+                      setKeyInAmount('');
+                    }}
+                    className="text-black hover:text-black"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-black mb-1">Amount *</label>
+                  <div
+                    onClick={() => setShowKeyInNumpad(true)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  >
+                    <span className="text-black">{keyInAmount ? `$${keyInAmount}` : <span className="text-gray-400">Tap to enter amount</span>}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (keyInAmount) {
+                        // Add the Key in item to cart
+                        const existingItem = cart.find(item => item.product.name === 'Key in');
+                        if (existingItem) {
+                          setCart(cart.map(item =>
+                            item.product.name === 'Key in'
+                              ? { ...item, quantity: item.quantity + 1, totalPrice: (item.quantity + 1) * parseFloat(keyInAmount) }
+                              : item
+                          ));
+                        } else {
+                          const newCartItem = {
+                            id: Date.now(),
+                            product: {
+                              upc: `KEYIN_${Date.now()}`,
+                              name: 'Key in',
+                              price: parseFloat(keyInAmount)
+                            },
+                            quantity: 1,
+                            totalPrice: parseFloat(keyInAmount)
+                          };
+                          setCart([...cart, newCartItem]);
+                        }
+
+                        setShowKeyIn(false);
+                        setKeyInAmount('');
+                        setMessage(`✓ Added: Key in - $${keyInAmount}`);
+                        setTimeout(() => setMessage(''), 3000);
+                      }
+                    }}
+                    disabled={!keyInAmount}
+                    className="flex-1 bg-orange-600 text-white py-2 rounded text-sm hover:bg-orange-700 disabled:bg-gray-400"
+                  >
+                    Add to Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowKeyIn(false);
+                      setKeyInAmount('');
                     }}
                     className="px-4 py-2 text-black hover:text-black text-sm"
                   >
@@ -1691,6 +2456,819 @@ export default function CheckoutPage() {
                         ⌫
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Option Selection Modal */}
+            {showOptionModal && selectedBaseItem && (
+              <div className="fixed inset-0 z-[10000] flex items-center justify-center"
+                   onClick={(e) => {
+                     // Dismiss if clicking outside the modal
+                     if (e.target === e.currentTarget) {
+                       setShowOptionModal(false);
+                       setSelectedBaseItem(null);
+                       setSelectedOptions({});
+                       setMultiSelectOptions({});
+                       setSelectedCartItem(null);
+                     }
+                   }}>
+                <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-[95vw] h-[90vh] w-full mx-2 flex flex-col"
+                     onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => {
+                      setShowOptionModal(false);
+                      setSelectedBaseItem(null);
+                      setSelectedOptions({});
+                      setMultiSelectOptions({});
+                      setSelectedCartItem(null);
+                    }}
+                    className="text-gray-600 hover:text-gray-800 font-medium mb-2 self-start"
+                  >
+                    ← Back
+                  </button>
+                  <h3 className="text-xl font-bold text-black mb-1 text-center">
+                    {selectedBaseItem.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3 text-center">
+                    {optionConfigs[selectedBaseItem.optionType]?.title}
+                    {optionConfigs[selectedBaseItem.optionType]?.multiSelect && (
+                      <span className="block text-xs mt-1">
+                        Selected: {Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0)}
+                        {optionConfigs[selectedBaseItem.optionType]?.maxFree &&
+                         Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0) > (optionConfigs[selectedBaseItem.optionType]?.maxFree || 0) &&
+                          ` (+$${((Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0) - (optionConfigs[selectedBaseItem.optionType]?.maxFree || 0)) *
+                                   (optionConfigs[selectedBaseItem.optionType]?.extraCharge || 0)).toFixed(2)} extra)`}
+                      </span>
+                    )}
+                  </p>
+                  <div className={`flex-1 grid gap-1.5 content-start p-1 ${(() => {
+                    const optionCount = optionConfigs[selectedBaseItem.optionType]?.options?.length || 0;
+                    if (optionCount <= 4) return 'grid-cols-2';
+                    if (optionCount <= 9) return 'grid-cols-3';
+                    if (optionCount <= 16) return 'grid-cols-4';
+                    return 'grid-cols-5';
+                  })()}`}>
+                    {optionConfigs[selectedBaseItem.optionType]?.options?.map((option) => {
+                      const optionCount = optionConfigs[selectedBaseItem.optionType]?.options?.length || 0;
+
+                      let price = selectedBaseItem.price;
+                      if (selectedBaseItem.prices) {
+                        if (selectedBaseItem.optionType === 'roll-hero') {
+                          price = selectedBaseItem.prices[option.toLowerCase()];
+                        } else if (selectedBaseItem.optionType === 'juice-size' || selectedBaseItem.optionType === 'juice-size-custom') {
+                          price = selectedBaseItem.prices[option.toLowerCase()];
+                        } else {
+                          price = selectedBaseItem.prices[option];
+                        }
+                      }
+
+                      // Determine button height based on number of options
+                      let buttonHeight = 'h-[150px]';
+                      if (optionCount > 12) buttonHeight = 'h-[80px]';
+                      else if (optionCount > 9) buttonHeight = 'h-[100px]';
+                      else if (optionCount > 6) buttonHeight = 'h-[120px]';
+
+                      const config = optionConfigs[selectedBaseItem.optionType];
+                      const isMultiSelect = config?.multiSelect;
+                      const quantity = multiSelectOptions[option] || 0;
+                      const isSelected = quantity > 0;
+
+                      return (
+                        <div
+                          key={option}
+                          className={`${buttonHeight} relative flex flex-col items-center justify-center p-1.5 bg-white border-2 ${
+                            isSelected ? 'border-blue-500' : 'border-gray-300'
+                          } rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all`}
+                        >
+                          <button
+                            onClick={() => {
+                              if (isMultiSelect) {
+                                // Multi-select logic - increment quantity on each click
+                                const newOptions = { ...multiSelectOptions };
+                                newOptions[option] = (newOptions[option] || 0) + 1;
+                                setMultiSelectOptions(newOptions);
+                              } else {
+                              // Single select - immediately add to cart
+                              setSelectedOptions({...selectedOptions, [selectedBaseItem.optionType]: option});
+
+                              // Construct the full item name with options
+                              let fullName = selectedBaseItem.name;
+                              let finalPrice = price || 0;
+
+                              if (selectedBaseItem.optionType === 'roll-hero') {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType === 'juice-size-custom') {
+                                // For Create Your Own Juice, save the size and show ingredients selection
+                                const juicePrice = selectedBaseItem.prices[option.toLowerCase()];
+                                const ingredientOptionType = option.toLowerCase() === 'small' ? 'juice-custom-small' : 'juice-custom-large';
+
+
+                                // Create a new item for the ingredients selection
+                                setSelectedBaseItem({
+                                  ...selectedBaseItem,
+                                  optionType: ingredientOptionType,
+                                  selectedSize: option,
+                                  basePrice: juicePrice,
+                                  prices: selectedBaseItem.prices // Keep prices for reference
+                                });
+                                setMultiSelectOptions({});
+                                return; // Don't close modal, continue to ingredients selection
+                              } else if (selectedBaseItem.optionType.includes('size')) {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType.includes('breakfast-bread')) {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType === 'bagel-type') {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType.includes('sauce') || selectedBaseItem.optionType.includes('dressing')) {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else if (selectedBaseItem.optionType === 'juice-size') {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              } else {
+                                fullName = `${selectedBaseItem.name} (${option})`;
+                              }
+
+                              // Add to food cart
+                              const existingItem = foodCart.find(cartItem => cartItem.name === fullName);
+                              if (existingItem) {
+                                setFoodCart(foodCart.map(cartItem =>
+                                  cartItem.name === fullName
+                                    ? {...cartItem, quantity: cartItem.quantity + 1}
+                                    : cartItem
+                                ));
+                              } else {
+                                setFoodCart([...foodCart, {name: fullName, price: finalPrice, quantity: 1}]);
+                              }
+
+                              // Close modal
+                              setShowOptionModal(false);
+                              setSelectedBaseItem(null);
+                              setSelectedOptions({});
+                              setSelectedCartItem(null);
+                            }
+                          }}
+                          className="w-full h-full flex flex-col items-center justify-center active:scale-95"
+                        >
+                          <span className={`font-semibold text-black text-center leading-tight ${
+                            optionCount > 12 ? 'text-xs' : optionCount > 9 ? 'text-sm' : 'text-base'
+                          }`}>
+                            {option}
+                          </span>
+                          {/* Only show price for single-select options */}
+                          {!isMultiSelect && (
+                            <span className={`text-green-600 font-bold mt-1 ${
+                              optionCount > 12 ? 'text-xs' : optionCount > 9 ? 'text-sm' : 'text-base'
+                            }`}>
+                              ${price?.toFixed(2)}
+                            </span>
+                          )}
+                          {/* Show quantity for selected multi-select options */}
+                          {isMultiSelect && isSelected && (
+                            <span className="text-black font-bold text-lg mt-1">{quantity}x</span>
+                          )}
+                        </button>
+                        {/* Minus button outside of main button for multi-select */}
+                        {isMultiSelect && isSelected && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newOptions = { ...multiSelectOptions };
+                              if (newOptions[option] > 1) {
+                                newOptions[option]--;
+                              } else {
+                                delete newOptions[option];
+                              }
+                              setMultiSelectOptions(newOptions);
+                            }}
+                            className="absolute top-1 left-1 w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-red-600 z-10"
+                          >
+                            −
+                          </button>
+                        )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add to Cart button for multi-select options */}
+                  {optionConfigs[selectedBaseItem.optionType]?.multiSelect && (
+                    <div className="mt-3 border-t pt-3">
+                      <button
+                        onClick={() => {
+                          const config = optionConfigs[selectedBaseItem.optionType];
+
+                          const totalItems = Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0);
+
+                          if (totalItems === 0) {
+                            // Show error or just return
+                            return;
+                          }
+
+                          // Calculate price with extra charges
+                          let finalPrice = selectedBaseItem.basePrice || selectedBaseItem.price || 0;
+                          const maxFree = config?.maxFree || 0;
+                          const extraCharge = config?.extraCharge || 0;
+
+                          if (totalItems > maxFree) {
+                            finalPrice += (totalItems - maxFree) * extraCharge;
+                          }
+
+                          // Construct the full item name with selected options and quantities
+                          const optionsList = Object.entries(multiSelectOptions)
+                            .map(([item, qty]) => qty > 1 ? `${qty}x ${item}` : item)
+                            .join(', ');
+
+                          // For Create Your Own Juice, include the size in the name
+                          let fullName;
+                          if (selectedBaseItem.optionType === 'juice-custom-small' || selectedBaseItem.optionType === 'juice-custom-large') {
+                            const size = selectedBaseItem.selectedSize || (selectedBaseItem.optionType === 'juice-custom-small' ? 'Small' : 'Large');
+                            fullName = `${selectedBaseItem.name.replace(' (Small)', '').replace(' (Large)', '')} (${size}, ${optionsList})`;
+                          } else {
+                            fullName = `${selectedBaseItem.name} (${optionsList})`;
+                          }
+
+                          // Check if we're editing an existing cart item (from customize)
+                          if (selectedCartItem) {
+                            // Replace the existing cart item with the updated one
+                            setFoodCart(foodCart.map(cartItem =>
+                              cartItem === selectedCartItem
+                                ? {...cartItem, name: fullName, price: finalPrice}
+                                : cartItem
+                            ));
+                          } else {
+                            // Add to food cart (normal flow)
+                            const existingItem = foodCart.find(cartItem => cartItem.name === fullName);
+                            if (existingItem) {
+                              setFoodCart(foodCart.map(cartItem =>
+                                cartItem.name === fullName
+                                  ? {...cartItem, quantity: cartItem.quantity + 1}
+                                  : cartItem
+                              ));
+                            } else {
+                              setFoodCart([...foodCart, {name: fullName, price: finalPrice, quantity: 1}]);
+                            }
+                          }
+
+                          // Close modal and reset
+                          setShowOptionModal(false);
+                          setSelectedBaseItem(null);
+                          setSelectedOptions({});
+                          setMultiSelectOptions({});
+                          setSelectedCartItem(null);
+                        }}
+                        disabled={Object.keys(multiSelectOptions).length === 0}
+                        className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all ${
+                          Object.keys(multiSelectOptions).length === 0
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700 active:scale-95'
+                        }`}
+                      >
+                        {Object.keys(multiSelectOptions).length === 0 ? 'Select Options' : `Add to Cart - $${(() => {
+                          const config = optionConfigs[selectedBaseItem.optionType];
+                          const totalItems = Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0);
+                          let finalPrice = selectedBaseItem.basePrice || selectedBaseItem.price || 0;
+                          const maxFree = config?.maxFree || 0;
+                          const extraCharge = config?.extraCharge || 0;
+
+                          if (totalItems > maxFree) {
+                            finalPrice += (totalItems - maxFree) * extraCharge;
+                          }
+
+                          return finalPrice.toFixed(2);
+                        })()}`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Modifier Selection Modal */}
+            {showModifierModal && selectedCartItem && (
+              <div className="fixed inset-0 z-[10000] flex items-center justify-center"
+                   onClick={(e) => {
+                     if (e.target === e.currentTarget) {
+                       setShowModifierModal(false);
+                       setSelectedCartItem(null);
+                       setSelectedModifiers({});
+                     }
+                   }}>
+                <div className="bg-white rounded-2xl shadow-2xl p-3 max-w-[95vw] h-[95vh] w-full mx-2 flex flex-col"
+                     onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-1 flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        setShowModifierModal(false);
+                        setSelectedCartItem(null);
+                        setSelectedModifiers({});
+                      }}
+                      className="text-gray-600 hover:text-gray-800 font-medium text-base px-3 py-1"
+                    >
+                      ← Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Apply modifiers to the cart item
+                        const updatedModifiers = Object.entries(selectedModifiers)
+                          .filter(([_, quantity]) => quantity > 0)
+                          .flatMap(([name, quantity]) => {
+                            const modifier = modifierConfigs[getModifierType(selectedCartItem.name) as keyof typeof modifierConfigs]
+                              ?.find(m => m.name === name);
+                            if (modifier) {
+                              // Create an array with one entry for each quantity
+                              return Array(quantity).fill({name: modifier.name, price: modifier.price, quantity: 1});
+                            }
+                            return [];
+                          });
+
+                        // Update the food cart with new modifiers
+                        setFoodCart(prev => prev.map((item, idx) => {
+                          if (item === selectedCartItem) {
+                            return {...item, modifiers: updatedModifiers};
+                          }
+                          return item;
+                        }));
+
+                        // Close modal
+                        setShowModifierModal(false);
+                        setSelectedCartItem(null);
+                        setSelectedModifiers({});
+                      }}
+                      className="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 font-medium text-base"
+                    >
+                      Apply →
+                    </button>
+                  </div>
+                  <h3 className="text-lg font-bold text-black text-center flex-shrink-0">
+                    Customize {selectedCartItem.name}
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-2 text-center flex-shrink-0">
+                    Select Add-Ons
+                  </p>
+                  <div className="flex-1 grid grid-cols-2 gap-2 p-2 content-start overflow-y-auto">
+                    {modifierConfigs[getModifierType(selectedCartItem.name) as keyof typeof modifierConfigs]?.map((modifier) => {
+                      const quantity = selectedModifiers[modifier.name] || 0;
+                      return (
+                        <div
+                          key={modifier.name}
+                          className={`h-[140px] relative p-3 rounded-lg border-2 transition-all ${
+                            quantity > 0
+                              ? 'border-blue-500'
+                              : 'border-gray-300'
+                          } bg-white hover:border-blue-500 hover:bg-blue-50`}
+                        >
+                          <button
+                            onClick={() => {
+                              setSelectedModifiers(prev => ({
+                                ...prev,
+                                [modifier.name]: (prev[modifier.name] || 0) + 1
+                              }));
+                            }}
+                            className="w-full h-full flex flex-col items-center justify-center active:scale-95"
+                          >
+                            <span className="font-semibold text-black text-base block">{modifier.name}</span>
+                            <div className="text-green-600 font-bold text-sm mt-1">
+                              +${modifier.price.toFixed(2)} each
+                            </div>
+                            {quantity > 0 && (
+                              <span className="text-black font-bold text-lg mt-2">{quantity}x</span>
+                            )}
+                          </button>
+                          {/* Minus button in upper left corner */}
+                          {quantity > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedModifiers(prev => ({
+                                  ...prev,
+                                  [modifier.name]: quantity - 1
+                                }));
+                              }}
+                              className="absolute top-1 left-1 w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-red-600 z-10"
+                            >
+                              −
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Weight Input Modal for By-the-Pound Items */}
+            {showWeightModal && selectedWeightItem && (
+              <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+                <OnScreenNumpad
+                  value={weightInput}
+                  onChange={(value) => setWeightInput(value)}
+                  onClose={() => {
+                    setShowWeightModal(false);
+                    setWeightInput('');
+                    setSelectedWeightItem(null);
+                  }}
+                  onEnter={() => {
+                    if (weightInput && parseFloat(weightInput) > 0) {
+                      handleWeightSubmit();
+                    }
+                  }}
+                  decimal={true}
+                  title={`${selectedWeightItem.name} - $${selectedWeightItem.price.toFixed(2)}/lb`}
+                  subtitle="Enter weight (e.g., 125 = 1.25 lbs)"
+                  maxLength={10}
+                  hidePrefix={true}
+                  suffix="lbs"
+                />
+              </div>
+            )}
+
+            {/* Edit Weight Modal */}
+            {showEditWeightModal && editingCartItem && (
+              <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+                <OnScreenNumpad
+                  value={weightInput}
+                  onChange={(value) => setWeightInput(value)}
+                  onClose={() => {
+                    setShowEditWeightModal(false);
+                    setWeightInput('');
+                    setEditingCartItem(null);
+                  }}
+                  onEnter={() => {
+                    if (weightInput && parseFloat(weightInput) > 0 && editingCartItem) {
+                      const newWeight = parseFloat(weightInput);
+                      const pricePerPound = editingCartItem.pricePerPound || editingCartItem.product.price;
+                      const newTotalPrice = pricePerPound * newWeight;
+
+                      // Extract the base name without the weight
+                      const baseName = editingCartItem.product.name.replace(/\s*\([^)]*lbs[^)]*\)/, '');
+                      const newName = `${baseName} (${newWeight} lbs)`;
+
+                      // Update the cart item
+                      setCart(cart.map(item => {
+                        if (item.product.upc === editingCartItem.product.upc) {
+                          return {
+                            ...item,
+                            weight: newWeight,
+                            product: {
+                              ...item.product,
+                              name: newName,
+                              price: newTotalPrice
+                            }
+                          };
+                        }
+                        return item;
+                      }));
+
+                      setMessage(`✓ Updated weight to ${newWeight} lbs`);
+                      setTimeout(() => setMessage(''), 2000);
+
+                      setShowEditWeightModal(false);
+                      setWeightInput('');
+                      setEditingCartItem(null);
+                    }
+                  }}
+                  decimal={true}
+                  title={`Edit Weight: ${editingCartItem.product.name.replace(/\s*\([^)]*\)/, '')}`}
+                  subtitle={`Current: ${editingCartItem.weight} lbs • $${editingCartItem.pricePerPound?.toFixed(2) || '0.00'}/lb`}
+                  maxLength={10}
+                  hidePrefix={true}
+                  suffix="lbs"
+                />
+              </div>
+            )}
+
+            {/* Food Selection Interface */}
+            {showFoodSelection && (
+              <div className="fixed inset-0 bg-gray-50 z-[9999] flex flex-col">
+                {/* Header with Back and Done buttons */}
+                <div className="bg-white border-b shadow-sm p-4 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        if (selectedFoodCategory) {
+                          // Go back to categories view
+                          setSelectedFoodCategory(null);
+                        } else {
+                          // Go back to cart, but preserve food selections
+                          setShowFoodSelection(false);
+                          // Keep foodCart state intact - don't clear it
+                          // selectedFoodCategory is already null, so no need to set it
+                        }
+                      }}
+                      className="text-gray-600 hover:text-gray-800 font-medium"
+                    >
+                      ← Back
+                    </button>
+
+                    <h2 className="text-xl font-bold text-black">
+                      {selectedFoodCategory || 'Food Categories'}
+                    </h2>
+
+                    <button
+                      onClick={handleFoodDone}
+                      className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                        foodCart.length > 0
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                      disabled={foodCart.length === 0}
+                    >
+                      ADD TO CART {foodCart.length > 0 && `(${foodCart.reduce((sum, item) => sum + item.quantity, 0)})`}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Split Screen Content */}
+                <div className="flex flex-1 overflow-hidden">
+                  {/* Left Side - Cart Display */}
+                  <div className="w-1/3 bg-white border-r border-gray-300 p-4 overflow-y-auto">
+                    <h3 className="font-bold text-lg mb-4 text-black">Cart Summary</h3>
+
+                    {/* Existing Cart */}
+                    {cart.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-sm text-gray-600 mb-2">Current Cart:</h4>
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {cart.map((item, index) => (
+                            <div key={index} className="flex justify-between text-sm">
+                              <span className="text-black truncate pr-2">{item.product.name} x{item.quantity}</span>
+                              <span className="text-black font-medium">${(item.product.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t mt-2 pt-2 flex justify-between font-bold text-sm text-black">
+                          <span>Subtotal:</span>
+                          <span>${cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New Food Items */}
+                    {foodCart.length > 0 && (
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3">
+                        <h4 className="font-semibold text-sm text-gray-600 mb-2">Adding to Cart:</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {[...foodCart].reverse().map((item, index) => {
+                            const modifierTotal = item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+                            const itemPrice = item.price || 0; // Handle undefined price
+                            const basePrice = item.isWeightBased
+                              ? (itemPrice * (item.weight || 0))
+                              : (itemPrice * item.quantity);
+                            const totalPrice = basePrice + (modifierTotal * (item.quantity || 1));
+
+                            return (
+                              <div key={index} className="flex flex-col space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-black text-sm truncate pr-2 flex-1">
+                                    {item.isWeightBased ? `${item.name} (${item.weight} lbs)` : item.name}
+                                  </span>
+                                  {!item.isWeightBased ? (
+                                    <div className="flex items-center gap-1 mr-2">
+                                      <button
+                                        onClick={() => handleFoodItemDecrease(item)}
+                                        className="w-5 h-5 rounded-full bg-white border border-gray-300 text-black hover:bg-gray-100 flex items-center justify-center text-xs"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="w-6 text-center text-xs font-semibold text-black">{item.quantity}</span>
+                                      <button
+                                        onClick={() => handleFoodItemClick(item)}
+                                        className="w-5 h-5 rounded-full bg-white border border-gray-300 text-black hover:bg-gray-100 flex items-center justify-center text-xs"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 mr-2">
+                                      <button
+                                        onClick={() => {
+                                          // Set up for editing this specific food cart item's weight
+                                          setSelectedWeightItem({ name: item.name, price: item.price });
+                                          setWeightInput(item.weight?.toString() || '');
+                                          setShowWeightModal(true);
+                                        }}
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                      >
+                                        Edit Weight
+                                      </button>
+                                    </div>
+                                  )}
+                                  <span className="text-black font-bold text-sm">${totalPrice.toFixed(2)}</span>
+                                </div>
+                                {item.modifiers && item.modifiers.length > 0 && (
+                                  <div className="pl-4 text-xs text-gray-600">
+                                    {(() => {
+                                      // Group modifiers by name and count
+                                      const modifierCounts: {[key: string]: {count: number, price: number}} = {};
+                                      item.modifiers.forEach(mod => {
+                                        if (!modifierCounts[mod.name]) {
+                                          modifierCounts[mod.name] = {count: 0, price: mod.price};
+                                        }
+                                        modifierCounts[mod.name].count++;
+                                      });
+
+                                      return Object.entries(modifierCounts).map(([name, data]) => (
+                                        <div key={name}>
+                                          + {data.count > 1 ? `${data.count}x ` : ''}{name} (+${(data.price * data.count).toFixed(2)})
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                )}
+                                {!item.isWeightBased && (
+                                  <button
+                                    onClick={() => {
+                                      // Check if this is a Create Your Own Juice item
+                                      if (item.name.includes('Create Your Own Juice')) {
+                                        // Parse the juice name to extract size and ingredients
+                                        const match = item.name.match(/Create Your Own Juice \((Large|Small)(?:, (.+))?\)/);
+                                        if (match) {
+                                          const size = match[1];
+                                          const ingredientsStr = match[2] || '';
+                                          const ingredients = ingredientsStr ? ingredientsStr.split(', ') : [];
+
+                                          // Set up the ingredient selection modal
+                                          const ingredientOptionType = size.toLowerCase() === 'small' ? 'juice-custom-small' : 'juice-custom-large';
+                                          const basePrice = size.toLowerCase() === 'small' ? 6.99 : 7.99;
+
+                                          // Pre-populate the multi-select options with current ingredients
+                                          const preselectedIngredients: {[key: string]: number} = {};
+                                          ingredients.forEach(ingredient => {
+                                            preselectedIngredients[ingredient] = 1;
+                                          });
+
+                                          setSelectedBaseItem({
+                                            name: 'Create Your Own Juice',
+                                            prices: {small: 6.99, large: 7.99},
+                                            requiresOptions: true,
+                                            optionType: ingredientOptionType,
+                                            selectedSize: size,
+                                            basePrice: basePrice
+                                          });
+                                          setMultiSelectOptions(preselectedIngredients);
+                                          setSelectedCartItem(item); // Keep track of which cart item we're editing
+                                          setShowOptionModal(true);
+                                          return;
+                                        }
+                                      }
+
+                                      // For all other items, use the normal modifier flow
+                                      setSelectedCartItem(item);
+                                      const modifierQuantities: {[key: string]: number} = {};
+                                      item.modifiers?.forEach(mod => {
+                                        modifierQuantities[mod.name] = (modifierQuantities[mod.name] || 0) + 1;
+                                      });
+                                      setSelectedModifiers(modifierQuantities);
+                                      setShowModifierModal(true);
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium self-start pl-2"
+                                  >
+                                    Customize
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Grand Total */}
+                    {(cart.length > 0 || foodCart.length > 0) && (
+                      <div className="mt-4 bg-gray-100 rounded-lg p-3">
+                        <div className="flex justify-between font-bold text-lg text-black">
+                          <span>Total:</span>
+                          <span>
+                            ${(
+                              cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0) +
+                              foodCart.reduce((sum, item) => {
+                                if (item.isWeightBased) {
+                                  return sum + (item.price * (item.weight || 0));
+                                } else {
+                                  return sum + (item.price * item.quantity);
+                                }
+                              }, 0)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {cart.length === 0 && foodCart.length === 0 && (
+                      <div className="text-gray-500 text-center py-8">
+                        Cart is empty
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Side - Food Selection */}
+                  <div className="flex-1 p-4 overflow-y-auto">
+                    {!selectedFoodCategory ? (
+                      // Show Categories
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {Object.keys(foodMenu).map((category) => (
+                          <button
+                            key={category}
+                            onClick={() => setSelectedFoodCategory(category)}
+                            className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:bg-blue-50 hover:border-blue-300 transition-all"
+                          >
+                            <div className="text-base font-semibold text-black">{category}</div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {foodMenu[category as keyof typeof foodMenu].length} items
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      // Show Food Items in Selected Category
+                      <div>
+                        {/* Back to Categories Button */}
+                        <button
+                          onClick={() => setSelectedFoodCategory(null)}
+                          className="mb-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        >
+                          ← Back to Categories
+                        </button>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {(() => {
+                          // Check if this category has optimized items
+                          const optimizedItems = foodMenuOptimized[selectedFoodCategory as keyof typeof foodMenuOptimized];
+                          const regularItems = foodMenu[selectedFoodCategory as keyof typeof foodMenu];
+                          const itemsToDisplay = optimizedItems || regularItems || [];
+
+                          return itemsToDisplay.map((item: any, index: number) => {
+                            const isOptimized = !!optimizedItems;
+                            const isWeightBased = selectedFoodCategory === 'CHEESE (By the Pound)' ||
+                                                selectedFoodCategory === 'COLD CUTS (By the Pound)';
+
+                            // For optimized items, check all possible variations in cart
+                            let totalQuantity = 0;
+                            let hasInCart = false;
+
+                            if (isOptimized && item.requiresOptions) {
+                              // Count all variations of this item in cart
+                              foodCart.forEach(cartItem => {
+                                if (cartItem.name.startsWith(item.name + ' (')) {
+                                  totalQuantity += cartItem.quantity;
+                                  hasInCart = true;
+                                }
+                              });
+                            } else {
+                              const cartItem = foodCart.find(ci => ci.name === item.name);
+                              totalQuantity = cartItem ? cartItem.quantity : 0;
+                              hasInCart = !!cartItem;
+                            }
+
+                            // Get display price (range for items with options)
+                            let displayPrice = '';
+                            if (item.prices) {
+                              const priceValues = Object.values(item.prices).map(p => typeof p === 'number' ? p : 0);
+                              const minPrice = Math.min(...priceValues);
+                              const maxPrice = Math.max(...priceValues);
+                              displayPrice = minPrice === maxPrice
+                                ? `$${minPrice.toFixed(2)}`
+                                : `$${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`;
+                            } else if (item.price) {
+                              displayPrice = `$${item.price.toFixed(2)}`;
+                            }
+
+                            return (
+                              <div
+                                key={index}
+                                className={`relative bg-white border-2 rounded-lg p-3 transition-all ${
+                                  hasInCart
+                                    ? 'border-green-400 bg-green-50'
+                                    : 'border-gray-200'
+                                }`}
+                              >
+                                {/* Quantity badge */}
+                                {totalQuantity > 0 && !isWeightBased && (
+                                  <div className="absolute -top-2 -right-2 bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center font-bold text-sm">
+                                    {totalQuantity}
+                                  </div>
+                                )}
+
+                                {/* Item content */}
+                                <button
+                                  onClick={() => isOptimized ? handleOptimizedFoodClick(item) : handleFoodItemClick(item)}
+                                  className="w-full text-left hover:bg-gray-50 rounded transition-colors p-1"
+                                >
+                                  <div className="font-semibold text-sm text-black">{item.name}</div>
+                                  <div className="text-green-600 font-bold text-sm mt-1">{displayPrice}</div>
+                                  {item.requiresOptions && (
+                                    <div className="text-xs text-gray-500 mt-1">Tap for options</div>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          });
+                        })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1971,8 +3549,22 @@ export default function CheckoutPage() {
                           <p className="text-xs text-black">
                             UPC: {item.product.upc}
                           </p>
+                          {item.isWeightBased && (
+                            <button
+                              onClick={() => {
+                                setEditingCartItem(item);
+                                setWeightInput(item.weight?.toString() || '');
+                                setShowEditWeightModal(true);
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+                              disabled={paymentMode !== 'idle'}
+                            >
+                              Edit Weight
+                            </button>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5 mr-3">
+                        {!item.isWeightBased ? (
+                          <div className="flex items-center gap-1.5 mr-3">
                           <button
                             onClick={() => updateQuantity(item.product.upc, -1)}
                             className="w-7 h-7 rounded-full bg-white border border-gray-300 text-black hover:bg-gray-100 flex items-center justify-center text-sm shadow-sm"
@@ -1989,6 +3581,11 @@ export default function CheckoutPage() {
                             +
                           </button>
                         </div>
+                        ) : (
+                          <div className="mr-3">
+                            <span className="text-sm text-black">{item.weight} lbs</span>
+                          </div>
+                        )}
                         <div className="text-sm font-bold text-black w-20 text-right mr-2">
                           ${(displayPrice * item.quantity).toFixed(2)}
                         </div>
