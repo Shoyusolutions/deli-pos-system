@@ -40,8 +40,10 @@ export default function CheckoutPage() {
   // Scanner and manual entry states
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showUpcNumpad, setShowUpcNumpad] = useState(false);
-  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [manualUpc, setManualUpc] = useState('');
   const [scanBuffer, setScanBuffer] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -660,6 +662,39 @@ export default function CheckoutPage() {
       setSuppliers(defaultSuppliers.map(name => ({ _id: name, name })));
     }
   };
+
+  // Search products function
+  const searchProducts = async (query: string) => {
+    if (!query.trim() || !storeId) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/products?storeId=${storeId}&search=${encodeURIComponent(query.trim())}`);
+      if (response.ok) {
+        const products = await response.json();
+        setSearchResults(products.slice(0, 10)); // Limit to 10 results
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchProducts(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, storeId]);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -1953,53 +1988,93 @@ export default function CheckoutPage() {
         />
       )}
 
-      {/* On-Screen Keyboard for Product Search */}
-      {showSearchKeyboard && (
-        <OnScreenKeyboard
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onClose={() => setShowSearchKeyboard(false)}
-          onEnter={async () => {
-            setShowSearchKeyboard(false);
-            if (searchQuery.trim() && storeId) {
-              try {
-                const response = await fetch(`/api/products?storeId=${storeId}&search=${encodeURIComponent(searchQuery.trim())}`);
-                if (response.ok) {
-                  const products = await response.json();
-                  if (products.length > 0) {
-                    const product = products[0]; // Use first match
-                    const newCartItem: CartItem = {
-                      product: {
-                        _id: product._id,
-                        upc: product.upc,
-                        name: product.name,
-                        price: product.price,
-                        inventory: product.inventory
-                      },
-                      quantity: 1
-                    };
-                    setCart([...cart, newCartItem]);
-                    setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
-                    setTimeout(() => setMessage(''), 3000);
-                  } else {
-                    setMessage('❌ No products found');
-                    setTimeout(() => setMessage(''), 3000);
-                  }
-                } else {
-                  setMessage('❌ Search failed');
-                  setTimeout(() => setMessage(''), 3000);
-                }
-              } catch (error) {
-                console.error('Search error:', error);
-                setMessage('❌ Search error');
-                setTimeout(() => setMessage(''), 3000);
-              }
-              setSearchQuery('');
-            }
-          }}
-          title="Search Products by Name"
-          type="text"
-        />
+      {/* Smart Search Modal */}
+      {showSearchModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-black">Search Products</h3>
+              <button
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="text-black hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Type product name..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                autoFocus
+              />
+            </div>
+
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto">
+              {isSearching && (
+                <div className="text-center py-4">
+                  <div className="text-gray-500">Searching...</div>
+                </div>
+              )}
+
+              {!isSearching && searchQuery && searchResults.length === 0 && (
+                <div className="text-center py-4">
+                  <div className="text-gray-500">No products found</div>
+                </div>
+              )}
+
+              {!isSearching && searchResults.length > 0 && (
+                <div className="space-y-2">
+                  {searchResults.map((product) => (
+                    <button
+                      key={product._id}
+                      onClick={() => {
+                        const newCartItem: CartItem = {
+                          product: {
+                            _id: product._id,
+                            upc: product.upc,
+                            name: product.name,
+                            price: product.price,
+                            inventory: product.inventory
+                          },
+                          quantity: 1
+                        };
+                        setCart([...cart, newCartItem]);
+                        setMessage(`✓ Added: ${product.name} - $${product.price.toFixed(2)}`);
+                        setTimeout(() => setMessage(''), 3000);
+                        setShowSearchModal(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}
+                      className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                    >
+                      <div className="font-medium text-black">{product.name}</div>
+                      <div className="text-sm text-gray-600">
+                        ${product.price.toFixed(2)} • Stock: {product.inventory}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!searchQuery && (
+                <div className="text-center py-8">
+                  <ShoppingCart className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                  <div className="text-gray-500">Start typing to search products</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* On-Screen Numpad for Key in Amount */}
@@ -2115,7 +2190,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between items-center gap-6 px-2 py-1">
                     <button
                       onClick={() => {
-                        setShowSearchKeyboard(true);
+                        setShowSearchModal(true);
                       }}
                       className="text-purple-600 hover:text-purple-700 flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 active:bg-purple-200 transition-colors text-sm font-medium"
                     >
