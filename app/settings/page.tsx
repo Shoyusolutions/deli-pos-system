@@ -349,6 +349,8 @@ export default function SettingsPage() {
           onClose={() => setShowTaxRateNumpad(false)}
           onEnter={() => setShowTaxRateNumpad(false)}
           decimal={true}
+          hidePrefix={true}
+          suffix="%"
           title="Enter Tax Rate (%)"
         />
       )}
@@ -363,6 +365,8 @@ export default function SettingsPage() {
           onClose={() => setShowCashDiscountNumpad(false)}
           onEnter={() => setShowCashDiscountNumpad(false)}
           decimal={true}
+          hidePrefix={true}
+          suffix="%"
           title="Enter Cash Discount Rate (%)"
         />
       )}
