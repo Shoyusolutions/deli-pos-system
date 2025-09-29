@@ -10,7 +10,10 @@
     "seed:users": "node scripts/seed-users.js",
     "seed:store": "node scripts/seed-store.js",
     "seed:products": "node scripts/seed-products.js",
-    "seed:all": "npm run seed:users && npm run seed:store && npm run seed:products"
+    "seed:all": "npm run seed:users && npm run seed:store && npm run seed:products",
+    "backup": "node scripts/backup-database.js",
+    "restore": "node scripts/restore-database.js",
+    "backup:auto": "sh scripts/setup-auto-backup.sh"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.891.0",
