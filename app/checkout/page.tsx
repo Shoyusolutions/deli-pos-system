@@ -2725,7 +2725,7 @@ export default function CheckoutPage() {
                         } else if (selectedBaseItem.optionType === 'cappuccino-flavor-size') {
                           // Extract size from option (e.g., "French Vanilla Small" -> "small")
                           const sizePart = option.split(' ').pop();
-                          price = selectedBaseItem.prices[sizePart.toLowerCase()];
+                          price = selectedBaseItem.prices[sizePart?.toLowerCase() || 'small'];
                         } else {
                           price = selectedBaseItem.prices[option];
                         }
