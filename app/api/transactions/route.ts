@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
     const inventoryChecks = [];
     const inventoryWarnings = [];
     for (const item of items) {
-      // Skip inventory checks for manual items
-      if (item.product.upc.startsWith('MANUAL_')) {
+      // Skip inventory checks for manual items and FOOD menu items
+      if (item.product.upc.startsWith('MANUAL_') || item.product.upc.startsWith('FOOD_')) {
         continue;
       }
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       storeId,
       transactionNumber,
       items: items.map((item: any) => ({
-        productId: item.product.upc.startsWith('MANUAL_') ? null : item.product._id,
+        productId: (item.product.upc.startsWith('MANUAL_') || item.product.upc.startsWith('FOOD_')) ? null : item.product._id,
         upc: item.product.upc,
         name: item.product.name,
         priceAtSale: item.product.price,  // Capture current price
