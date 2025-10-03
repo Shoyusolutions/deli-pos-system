@@ -97,7 +97,7 @@ export function createSecureToken(user: any): string {
       role: user.role,
       email: user.email,
       iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 8) // 8 hours
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours for POS system
     },
     process.env.JWT_SECRET!,
     { algorithm: 'HS256' }

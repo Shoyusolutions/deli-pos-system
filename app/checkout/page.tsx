@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Keyboard, Package, X, Plus, ShoppingCart } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
 
 interface Product {
   _id?: string;
@@ -24,6 +25,7 @@ interface CartItem {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { checkSession } = useSessionCheck();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [message, setMessage] = useState('');
   const [paymentMode, setPaymentMode] = useState<'idle' | 'payment' | 'cash' | 'card' | 'success' | 'change'>('idle');
@@ -811,6 +813,14 @@ export default function CheckoutPage() {
 
   const handleScanComplete = async (upc: string) => {
     if (!upc || !storeId) return;
+
+    // Check session before processing scan
+    const sessionValid = await checkSession();
+    if (!sessionValid) {
+      setMessage('⚠️ Session expired. Please login again.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
 
     // Prevent scanning if there's an unresolved not found product
     if (notFoundUpc) {
