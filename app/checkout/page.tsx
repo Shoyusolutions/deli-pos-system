@@ -2187,10 +2187,19 @@ export default function CheckoutPage() {
         <OnScreenNumpad
           value={openFoodPrice}
           onChange={setOpenFoodPrice}
-          onClose={() => setShowOpenFoodNumpad(false)}
-          onEnter={() => setShowOpenFoodNumpad(false)}
+          onClose={() => {
+            setShowOpenFoodNumpad(false);
+            setOpenFoodPrice('');
+          }}
+          onEnter={() => {
+            if (openFoodPrice && parseFloat(openFoodPrice) > 0) {
+              handleOpenFoodAdd();
+            }
+            setShowOpenFoodNumpad(false);
+          }}
           decimal={true}
           title="Enter Open Food Price"
+          zIndex={10001}
         />
       )}
 
@@ -3447,7 +3456,10 @@ export default function CheckoutPage() {
 
                         {/* OPEN FOOD Button */}
                         <button
-                          onClick={() => setShowOpenFood(true)}
+                          onClick={() => {
+                            setOpenFoodPrice('');
+                            setShowOpenFoodNumpad(true);
+                          }}
                           className="bg-orange-100 border-2 border-orange-300 rounded-lg p-4 hover:bg-orange-200 hover:border-orange-400 transition-all"
                         >
                           <div className="text-base font-semibold text-orange-800">OPEN FOOD</div>

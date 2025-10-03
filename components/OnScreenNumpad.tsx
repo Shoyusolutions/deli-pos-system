@@ -14,6 +14,7 @@ interface OnScreenNumpadProps {
   maxLength?: number;
   hidePrefix?: boolean;
   suffix?: string;
+  zIndex?: number;
 }
 
 export default function OnScreenNumpad({
@@ -26,7 +27,8 @@ export default function OnScreenNumpad({
   subtitle,
   maxLength = 10,
   hidePrefix = false,
-  suffix = ''
+  suffix = '',
+  zIndex = 9999
 }: OnScreenNumpadProps) {
 
   // Internal state - for currency mode track cents, for integer mode track raw value
@@ -121,7 +123,7 @@ export default function OnScreenNumpad({
   };
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center z-[9999] pointer-events-none">
+    <div className={`fixed inset-0 flex items-end justify-center pointer-events-none`} style={{ zIndex }}>
       <div className="bg-white rounded-t-2xl shadow-2xl p-3 sm:p-4 md:p-5 w-full max-w-[95vw] sm:max-w-sm md:max-w-md lg:max-w-lg pointer-events-auto">
         {/* Header */}
         <div className="flex flex-col mb-3 sm:mb-4 pb-2 border-b">
