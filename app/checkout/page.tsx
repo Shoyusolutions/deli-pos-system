@@ -130,6 +130,10 @@ export default function CheckoutPage() {
   const [selectedOptions, setSelectedOptions] = useState<{[key: string]: string}>({});
   const [multiSelectOptions, setMultiSelectOptions] = useState<{[key: string]: number}>({});
 
+  // Combo selection states
+  const [showComboModal, setShowComboModal] = useState(false);
+  const [selectedComboItem, setSelectedComboItem] = useState<{name: string, price: number} | null>(null);
+
   // States for modifiers/add-ons
   const [showModifierModal, setShowModifierModal] = useState(false);
   const [selectedCartItem, setSelectedCartItem] = useState<{name: string, price: number, quantity: number, modifiers?: any[]} | null>(null);
@@ -397,6 +401,29 @@ export default function CheckoutPage() {
     if (name.includes('fries') || name.includes('rings') || name.includes('mozzarella')) return 'sides';
     return 'sandwich'; // default
   };
+
+  // Combo options configuration
+  const comboOptions = {
+    drink: [
+      { name: 'Coke', price: 0 },
+      { name: 'Pepsi', price: 0 },
+      { name: 'Sprite', price: 0 },
+      { name: 'Orange Soda', price: 0 },
+      { name: 'Iced Tea', price: 0 },
+      { name: 'Coffee', price: 0 },
+      { name: 'Water', price: 0 }
+    ],
+    side: [
+      { name: 'French Fries', price: 0 },
+      { name: 'Onion Rings', price: 0.50 },
+      { name: 'Mozzarella Sticks', price: 1.00 },
+      { name: 'Potato Salad', price: 0 },
+      { name: 'Coleslaw', price: 0 },
+      { name: 'Chips', price: 0 }
+    ]
+  };
+
+  const comboUpcharge = 2.99; // Additional cost to make any item a combo
 
   // Food menu data structure (keep original for non-optimized items)
   const foodMenu = {
@@ -1078,19 +1105,44 @@ export default function CheckoutPage() {
       setWeightInput('');
       setShowWeightModal(true);
     } else {
-      // Regular quantity-based item
-      const existingItem = foodCart.find(cartItem => cartItem.name === item.name);
-      if (existingItem) {
-        // Increase quantity if item already exists
-        setFoodCart(foodCart.map(cartItem =>
-          cartItem.name === item.name
-            ? {...cartItem, quantity: cartItem.quantity + 1}
-            : cartItem
-        ));
-      } else {
-        // Add new item with quantity 1
-        setFoodCart([...foodCart, {name: item.name, price: item.price, quantity: 1}]);
-      }
+      // For all other items, show combo modal first
+      setSelectedComboItem(item);
+      setShowComboModal(true);
+    }
+  };
+
+  // Handle adding item directly without combo (from combo modal)
+  const handleAddRegularItem = (item: {name: string, price: number}) => {
+    const existingItem = foodCart.find(cartItem => cartItem.name === item.name);
+    if (existingItem) {
+      // Increase quantity if item already exists
+      setFoodCart(foodCart.map(cartItem =>
+        cartItem.name === item.name
+          ? {...cartItem, quantity: cartItem.quantity + 1}
+          : cartItem
+      ));
+    } else {
+      // Add new item with quantity 1
+      setFoodCart([...foodCart, {name: item.name, price: item.price, quantity: 1}]);
+    }
+  };
+
+  // Handle adding combo item
+  const handleAddComboItem = (item: {name: string, price: number}, drink: string, side: string, drinkPrice: number, sidePrice: number) => {
+    const comboName = `${item.name} Combo (${drink}, ${side})`;
+    const comboPrice = item.price + comboUpcharge + drinkPrice + sidePrice;
+
+    const existingItem = foodCart.find(cartItem => cartItem.name === comboName);
+    if (existingItem) {
+      // Increase quantity if combo already exists
+      setFoodCart(foodCart.map(cartItem =>
+        cartItem.name === comboName
+          ? {...cartItem, quantity: cartItem.quantity + 1}
+          : cartItem
+      ));
+    } else {
+      // Add new combo item
+      setFoodCart([...foodCart, {name: comboName, price: comboPrice, quantity: 1}]);
     }
   };
 
@@ -3076,6 +3128,28 @@ export default function CheckoutPage() {
                   <h3 className="text-lg font-bold text-black text-center flex-shrink-0">
                     Customize {selectedCartItem.name}
                   </h3>
+
+                  {/* Combo Option Section */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3 flex-shrink-0">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-orange-800">Make it a Combo</span>
+                      <span className="text-orange-600 font-bold">+${comboUpcharge.toFixed(2)}</span>
+                    </div>
+                    <p className="text-xs text-orange-700 mb-3">Add drink & side for ${comboUpcharge.toFixed(2)} extra</p>
+                    <button
+                      onClick={() => {
+                        // Add combo version of this item
+                        const baseItem = { name: selectedCartItem.name, price: selectedCartItem.price };
+                        setSelectedComboItem(baseItem);
+                        setShowComboModal(true);
+                        setShowModifierModal(false);
+                      }}
+                      className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 font-medium text-sm"
+                    >
+                      Add as Combo
+                    </button>
+                  </div>
+
                   <p className="text-xs text-gray-600 mb-2 text-center flex-shrink-0">
                     Select Add-Ons
                   </p>
@@ -3979,6 +4053,73 @@ export default function CheckoutPage() {
         </div>
       </div>
 
+      {/* Combo Selection Modal */}
+      {showComboModal && selectedComboItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-black">Choose Option for {selectedComboItem.name}</h3>
+              <button
+                onClick={() => {
+                  setShowComboModal(false);
+                  setSelectedComboItem(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Regular Item Option */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold text-black">Regular Item</h4>
+                  <span className="text-xl font-bold text-green-600">${selectedComboItem.price.toFixed(2)}</span>
+                </div>
+                <p className="text-gray-600 text-sm mb-3">Just the item by itself</p>
+                <button
+                  onClick={() => {
+                    handleAddRegularItem(selectedComboItem);
+                    setShowComboModal(false);
+                    setSelectedComboItem(null);
+                    setMessage(`✓ Added: ${selectedComboItem.name}`);
+                    setTimeout(() => setMessage(''), 3000);
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Add Regular Item
+                </button>
+              </div>
+
+              {/* Combo Option */}
+              <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold text-orange-800">Make it a Combo</h4>
+                  <span className="text-xl font-bold text-orange-600">
+                    ${(selectedComboItem.price + comboUpcharge).toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-orange-700 text-sm mb-4">
+                  Includes drink & side (+${comboUpcharge.toFixed(2)})
+                </p>
+
+                <ComboSelectorInline
+                  onComboSelect={(drink, side, drinkPrice, sidePrice) => {
+                    handleAddComboItem(selectedComboItem, drink, side, drinkPrice, sidePrice);
+                    setShowComboModal(false);
+                    setSelectedComboItem(null);
+                    setMessage(`✓ Added: ${selectedComboItem.name} Combo`);
+                    setTimeout(() => setMessage(''), 3000);
+                  }}
+                  comboOptions={comboOptions}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Open Food Modal */}
       {showOpenFood && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]">
@@ -4077,5 +4218,76 @@ export default function CheckoutPage() {
       )}
     </div>
   </div>
+  );
+}
+
+// Combo Selector Component
+function ComboSelectorInline({
+  onComboSelect,
+  comboOptions
+}: {
+  onComboSelect: (drink: string, side: string, drinkPrice: number, sidePrice: number) => void;
+  comboOptions: { drink: {name: string, price: number}[], side: {name: string, price: number}[] };
+}) {
+  const [selectedDrink, setSelectedDrink] = useState<{name: string, price: number} | null>(null);
+  const [selectedSide, setSelectedSide] = useState<{name: string, price: number} | null>(null);
+
+  return (
+    <div className="space-y-4">
+      {/* Drink Selection */}
+      <div>
+        <h4 className="font-semibold text-black mb-2">Choose Drink:</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {comboOptions.drink.map((drink) => (
+            <button
+              key={drink.name}
+              onClick={() => setSelectedDrink(drink)}
+              className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                selectedDrink?.name === drink.name
+                  ? 'border-orange-500 bg-orange-100 text-orange-800'
+                  : 'border-gray-300 bg-white text-black hover:border-orange-300'
+              }`}
+            >
+              {drink.name}
+              {drink.price > 0 && <span className="block text-xs">+${drink.price.toFixed(2)}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Side Selection */}
+      <div>
+        <h4 className="font-semibold text-black mb-2">Choose Side:</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {comboOptions.side.map((side) => (
+            <button
+              key={side.name}
+              onClick={() => setSelectedSide(side)}
+              className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                selectedSide?.name === side.name
+                  ? 'border-orange-500 bg-orange-100 text-orange-800'
+                  : 'border-gray-300 bg-white text-black hover:border-orange-300'
+              }`}
+            >
+              {side.name}
+              {side.price > 0 && <span className="block text-xs">+${side.price.toFixed(2)}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Add Combo Button */}
+      <button
+        onClick={() => {
+          if (selectedDrink && selectedSide) {
+            onComboSelect(selectedDrink.name, selectedSide.name, selectedDrink.price, selectedSide.price);
+          }
+        }}
+        disabled={!selectedDrink || !selectedSide}
+        className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+      >
+        {selectedDrink && selectedSide ? 'Add Combo to Cart' : 'Select Drink & Side'}
+      </button>
+    </div>
   );
 }
