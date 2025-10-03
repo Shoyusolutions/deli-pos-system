@@ -146,7 +146,9 @@ export default function CheckoutPage() {
       { name: 'Pastrami', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.99, hero: 9.99 } },
       { name: 'Chipotle Chicken', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
       { name: 'Honey Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
-      { name: 'Oven Gold Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } }
+      { name: 'Oven Gold Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
+      { name: 'Salsalito Turkey', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.00, hero: 9.00 } },
+      { name: 'Turkey Ham', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 8.00, hero: 9.00 } }
     ],
     'SANDWICHES': [
       { name: 'Chicken Cutlet', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 7.99, hero: 8.99 } },
@@ -162,6 +164,9 @@ export default function CheckoutPage() {
       { name: 'Roast Beef Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'breakfast-bread' },
       { name: 'Pastrami Egg & Cheese', price: 8.99, requiresOptions: true, optionType: 'breakfast-bread' },
       { name: 'Chicken Cutlet Egg & Cheese', price: 7.99, requiresOptions: true, optionType: 'breakfast-bread-no-bagel' },
+      { name: 'BLT (Bacon, Lettuce, Tomato)', requiresOptions: true, optionType: 'roll-hero', prices: { roll: 6.00, hero: 7.00 } },
+      { name: 'Roll/Bagel with Butter', price: 2.00, requiresOptions: true, optionType: 'breakfast-bread' },
+      { name: 'Roll/Bagel Cream Cheese with Bacon', price: 5.00, requiresOptions: true, optionType: 'breakfast-bread' }
     ],
     'OMELETTES': [
       { name: 'Mexican Omelette', price: 7.99, requiresOptions: false },
@@ -591,7 +596,9 @@ export default function CheckoutPage() {
       { name: 'Pastrami (1 lb)', price: 15.99 },
       { name: 'Chipotle Chicken (1 lb)', price: 13.99 },
       { name: 'Honey Turkey (1 lb)', price: 13.99 },
-      { name: 'Oven Gold Turkey (1 lb)', price: 13.99 }
+      { name: 'Oven Gold Turkey (1 lb)', price: 13.99 },
+      { name: 'Salsalito Turkey (1 lb)', price: 14.00 },
+      { name: 'Turkey Ham (1 lb)', price: 14.00 }
     ],
     'COFFEE/TEA': [
       { name: 'Hot Coffee (Small)', price: 1.50 },
