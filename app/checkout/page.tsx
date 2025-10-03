@@ -1246,9 +1246,9 @@ export default function CheckoutPage() {
 
     const price = parseFloat(openFoodPrice);
 
-    // Add to food cart
+    // Add to food cart with unique name to ensure separate line items
     const openFoodItem = {
-      name: 'Open Food Item',
+      name: `Open Food Item - $${price.toFixed(2)}`,
       price: price,
       quantity: 1
     };
