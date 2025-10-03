@@ -122,6 +122,11 @@ export default function CheckoutPage() {
   // New states for food options
   const [showOptionModal, setShowOptionModal] = useState(false);
   const [selectedBaseItem, setSelectedBaseItem] = useState<any | null>(null);
+
+  // Open food item states
+  const [showOpenFood, setShowOpenFood] = useState(false);
+  const [openFoodPrice, setOpenFoodPrice] = useState('');
+  const [showOpenFoodNumpad, setShowOpenFoodNumpad] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<{[key: string]: string}>({});
   const [multiSelectOptions, setMultiSelectOptions] = useState<{[key: string]: number}>({});
 
@@ -1235,6 +1240,28 @@ export default function CheckoutPage() {
     setTimeout(() => setMessage(''), 3000);
   };
 
+  // Handle open food item addition
+  const handleOpenFoodAdd = () => {
+    if (!openFoodPrice || parseFloat(openFoodPrice) <= 0) return;
+
+    const price = parseFloat(openFoodPrice);
+
+    // Add to food cart
+    const openFoodItem = {
+      name: 'Open Food Item',
+      price: price,
+      quantity: 1
+    };
+
+    setFoodCart([...foodCart, openFoodItem]);
+
+    // Clear and close
+    setOpenFoodPrice('');
+    setShowOpenFood(false);
+    setMessage(`✓ Added Open Food Item - $${price.toFixed(2)}`);
+    setTimeout(() => setMessage(''), 3000);
+  };
+
   const handleAddNewProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProductName || !newProductPrice || !notFoundUpc || !storeId) return;
@@ -2152,6 +2179,18 @@ export default function CheckoutPage() {
           onEnter={() => setShowKeyInNumpad(false)}
           decimal={true}
           title="Enter Amount"
+        />
+      )}
+
+      {/* On-Screen Numpad for Open Food Price */}
+      {showOpenFoodNumpad && (
+        <OnScreenNumpad
+          value={openFoodPrice}
+          onChange={setOpenFoodPrice}
+          onClose={() => setShowOpenFoodNumpad(false)}
+          onEnter={() => setShowOpenFoodNumpad(false)}
+          decimal={true}
+          title="Enter Open Food Price"
         />
       )}
 
@@ -3405,6 +3444,17 @@ export default function CheckoutPage() {
                             </div>
                           </button>
                         ))}
+
+                        {/* OPEN FOOD Button */}
+                        <button
+                          onClick={() => setShowOpenFood(true)}
+                          className="bg-orange-100 border-2 border-orange-300 rounded-lg p-4 hover:bg-orange-200 hover:border-orange-400 transition-all"
+                        >
+                          <div className="text-base font-semibold text-orange-800">OPEN FOOD</div>
+                          <div className="text-xs text-orange-600 mt-1">
+                            Enter custom price
+                          </div>
+                        </button>
                       </div>
                     ) : (
                       // Show Food Items in Selected Category
@@ -3916,6 +3966,61 @@ export default function CheckoutPage() {
           )}
         </div>
       </div>
+
+      {/* Open Food Modal */}
+      {showOpenFood && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-black">Open Food Item</h3>
+              <button
+                onClick={() => {
+                  setShowOpenFood(false);
+                  setOpenFoodPrice('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-2">
+                Price *
+              </label>
+              <div
+                onClick={() => setShowOpenFoodNumpad(true)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+              >
+                {openFoodPrice ? (
+                  <span className="text-black font-semibold">${openFoodPrice}</span>
+                ) : (
+                  <span className="text-gray-400">Tap to enter price</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleOpenFoodAdd}
+                disabled={!openFoodPrice || parseFloat(openFoodPrice) <= 0}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Add to Cart
+              </button>
+              <button
+                onClick={() => {
+                  setShowOpenFood(false);
+                  setOpenFoodPrice('');
+                }}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Scan Feedback Overlay */}
       {scanFeedback.show && (
