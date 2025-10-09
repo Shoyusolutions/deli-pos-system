@@ -410,7 +410,7 @@ export default function CheckoutPage() {
   };
 
 
-  const comboUpcharge = 2.99; // Additional cost to make any item a combo
+  const comboUpcharge = 4.00; // Additional cost to make any item a combo
 
   // Food menu data structure (keep original for non-optimized items)
   const foodMenu = {
@@ -3142,13 +3142,8 @@ export default function CheckoutPage() {
                     Customize {selectedCartItem.name}
                   </h3>
 
-                  {/* Combo Option Section */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3 flex-shrink-0">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-orange-800">Make it a Combo</span>
-                      <span className="text-orange-600 font-bold">+${comboUpcharge.toFixed(2)}</span>
-                    </div>
-                    <p className="text-xs text-orange-700 mb-3">Add drink & side for ${comboUpcharge.toFixed(2)} extra</p>
+                  {/* Combo Option Section - Simplified */}
+                  <div className="flex items-center gap-3 mb-3 flex-shrink-0">
                     <button
                       onClick={() => {
                         // Add combo version directly without selection
@@ -3174,9 +3169,9 @@ export default function CheckoutPage() {
                         setMessage(`✓ Added: ${comboName}`);
                         setTimeout(() => setMessage(''), 3000);
                       }}
-                      className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 font-medium text-sm"
+                      className="px-4 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm"
                     >
-                      Add as Combo
+                      Add Combo +$4.00
                     </button>
                   </div>
 
