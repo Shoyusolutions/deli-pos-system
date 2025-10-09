@@ -419,6 +419,27 @@ export default function CheckoutPage() {
       { name: 'Add Blue Cheese', price: 0.50 },
       { name: 'Make it Spicy', price: 0.00 },
     ],
+    tenders: [
+      { name: 'Extra Sauce', price: 0.50 },
+      { name: 'Add Ranch', price: 0.50 },
+      { name: 'Add Blue Cheese', price: 0.50 },
+      { name: 'Make it Spicy', price: 0.00 },
+    ],
+    nuggets: [
+      { name: 'Extra Sauce', price: 0.50 },
+      { name: 'Add Ranch', price: 0.50 },
+      { name: 'Add Blue Cheese', price: 0.50 },
+    ],
+    bagel: [
+      { name: 'Extra Cream Cheese', price: 1.00 },
+      { name: 'Add Lox', price: 4.00 },
+      { name: 'Add Tomato', price: 0.50 },
+      { name: 'Add Onion', price: 0.50 },
+    ],
+    pastry: [
+      { name: 'Warm it up', price: 0.00 },
+      { name: 'Add Butter', price: 0.50 },
+    ],
     sides: [
       { name: 'Extra Sauce', price: 0.50 },
       { name: 'Make it Large', price: 2.00 },
@@ -428,19 +449,36 @@ export default function CheckoutPage() {
   // Helper to determine modifier type from item name
   const getModifierType = (itemName: string): string => {
     const name = itemName.toLowerCase();
-    if (name.includes('egg') && name.includes('cheese')) return 'breakfast';
-    if (name.includes('omelette') || name.includes('omelet')) return 'omelette';
+
+    // Check specific items first (more specific before general)
     if (name.includes('burger')) return 'burger';
     if (name.includes('quesadilla')) return 'quesadilla';
-    if (name.includes('over rice') || name.includes('platter')) return 'platters';
+    if (name.includes('over rice')) return 'platters';
     if (name.includes('gyro')) return 'gyro';
     if (name.includes('panini')) return 'panini';
     if (name.includes('wings')) return 'wings';
-    if (name.includes('tenders') || name.includes('nuggets')) return 'sides';
+    if (name.includes('tenders')) return 'tenders';
+    if (name.includes('nuggets')) return 'nuggets';
+    if (name.includes('omelette') || name.includes('omelet')) return 'omelette';
+    if (name.includes('bagel')) return 'bagel';
     if (name.includes('salad')) return 'salad';
-    if (name.includes('fries') || name.includes('rings') || name.includes('mozzarella')) return 'sides';
-    if (name.includes('chicken') || name.includes('beef') || name.includes('turkey') ||
-        name.includes('pastrami') || name.includes('philly') || name.includes('chopped')) return 'sandwich';
+    if (name.includes('fries') || name.includes('onion rings') || name.includes('mozzarella')) return 'sides';
+    if (name.includes('beef patty')) return 'sides';
+    if (name.includes('pastry')) return 'pastry';
+
+    // Breakfast items (check after bagel to avoid conflicts)
+    if ((name.includes('egg') && name.includes('cheese')) ||
+        (name.includes('bacon') && name.includes('egg')) ||
+        (name.includes('sausage') && name.includes('egg')) ||
+        (name.includes('roll') && name.includes('butter')) ||
+        name.includes('blt')) return 'breakfast';
+
+    // Sandwiches (check last as catch-all for meat items)
+    if (name.includes('chicken cutlet') || name.includes('philly') ||
+        name.includes('chopped cheese') || name.includes('grilled chicken') ||
+        name.includes('roast beef') || name.includes('pastrami') ||
+        name.includes('turkey') || name.includes('ham')) return 'sandwich';
+
     return 'sandwich'; // default
   };
 
