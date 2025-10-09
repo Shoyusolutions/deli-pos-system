@@ -127,6 +127,10 @@ export default function CheckoutPage() {
   const [showOpenFood, setShowOpenFood] = useState(false);
   const [openFoodPrice, setOpenFoodPrice] = useState('');
   const [showOpenFoodNumpad, setShowOpenFoodNumpad] = useState(false);
+
+  // Open Item states (for general items above order summary)
+  const [showOpenItem, setShowOpenItem] = useState(false);
+  const [openItemPrice, setOpenItemPrice] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<{[key: string]: string}>({});
   const [multiSelectOptions, setMultiSelectOptions] = useState<{[key: string]: number}>({});
 
@@ -1250,9 +1254,14 @@ export default function CheckoutPage() {
 
     const price = parseFloat(openFoodPrice);
 
+    // Generate a short unique identifier for display (last 4 digits of timestamp)
+    const timestamp = Date.now();
+    const shortId = timestamp.toString().slice(-4);
+
     // Add to food cart with unique name to ensure separate line items
+    // Include a short ID that makes each item unique but isn't too verbose
     const openFoodItem = {
-      name: `Open Food Item - $${price.toFixed(2)}`,
+      name: `Open Food Item - $${price.toFixed(2)} (#${shortId})`,
       price: price,
       quantity: 1
     };
@@ -1263,6 +1272,37 @@ export default function CheckoutPage() {
     setOpenFoodPrice('');
     setShowOpenFood(false);
     setMessage(`✓ Added Open Food Item - $${price.toFixed(2)}`);
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  // Handle open item addition (general items above order summary)
+  const handleOpenItemAdd = () => {
+    if (!openItemPrice || parseFloat(openItemPrice) <= 0) return;
+
+    const price = parseFloat(openItemPrice);
+
+    // Generate unique identifier using timestamp
+    const timestamp = Date.now();
+    const shortId = timestamp.toString().slice(-4);
+
+    // Add directly to cart with proper structure
+    const newCartItem: CartItem = {
+      product: {
+        _id: `open_${timestamp}`,
+        upc: `OPEN_${timestamp}`,
+        name: `Open Item - $${price.toFixed(2)} (#${shortId})`,
+        price: price,
+        inventory: 999
+      },
+      quantity: 1
+    };
+
+    setCart([newCartItem, ...cart]);
+
+    // Clear and close
+    setOpenItemPrice('');
+    setShowOpenItem(false);
+    setMessage(`✓ Added Open Item - $${price.toFixed(2)}`);
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -2203,6 +2243,27 @@ export default function CheckoutPage() {
           }}
           decimal={true}
           title="Enter Open Food Price"
+          zIndex={10001}
+        />
+      )}
+
+      {/* Open Item Numpad Modal */}
+      {showOpenItem && (
+        <OnScreenNumpad
+          value={openItemPrice}
+          onChange={setOpenItemPrice}
+          onClose={() => {
+            setShowOpenItem(false);
+            setOpenItemPrice('');
+          }}
+          onEnter={() => {
+            if (openItemPrice && parseFloat(openItemPrice) > 0) {
+              handleOpenItemAdd();
+            }
+            setShowOpenItem(false);
+          }}
+          decimal={true}
+          title="Enter Open Item Price"
           zIndex={10001}
         />
       )}
@@ -3937,7 +3998,15 @@ export default function CheckoutPage() {
 
           {/* Only show summary when idle */}
           {paymentMode === 'idle' && (
-            <div className="lg:col-span-1 flex flex-col h-full">
+            <div className="lg:col-span-1 flex flex-col h-full space-y-4">
+              {/* Open Item Button */}
+              <button
+                onClick={() => setShowOpenItem(true)}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold transition-colors shadow-sm"
+              >
+                Open Item
+              </button>
+
               <div className="bg-white rounded-xl shadow-sm flex flex-col" style={{ height: 'fit-content' }}>
                 {/* Summary Header */}
                 <div className="p-4 border-b border-gray-100 bg-gray-50">
