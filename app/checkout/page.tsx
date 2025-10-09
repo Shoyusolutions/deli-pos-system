@@ -858,8 +858,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Check if we should block scanning
-      if (notFoundUpc || showManualKeyIn || showKeyIn || showAddProduct) {
+      // Check if we should block scanning (but allow in price check mode)
+      if (!priceCheckMode && (notFoundUpc || showManualKeyIn || showKeyIn || showAddProduct)) {
         // If it looks like a scan attempt (numbers or Enter with buffer)
         if ((e.key >= '0' && e.key <= '9') || (e.key === 'Enter' && scanBuffer.length > 0)) {
           e.preventDefault();
@@ -911,7 +911,7 @@ export default function CheckoutPage() {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [paymentMode, showManualEntry, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message]);
+  }, [paymentMode, showManualEntry, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message, priceCheckMode]);
 
   const handleScanComplete = async (upc: string) => {
     if (!upc || !storeId) return;
@@ -924,16 +924,19 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Prevent scanning if there's an unresolved not found product
-    if (notFoundUpc) {
-      // Flash the screen red
-      setScreenFlash(true);
-      setTimeout(() => setScreenFlash(false), 500);
+    // If in price check mode, don't check for unresolved products
+    if (!priceCheckMode) {
+      // Prevent scanning if there's an unresolved not found product
+      if (notFoundUpc) {
+        // Flash the screen red
+        setScreenFlash(true);
+        setTimeout(() => setScreenFlash(false), 500);
 
-      // Show alert message temporarily
-      setMessage('⚠️ Please add product details before scanning next item');
-      setTimeout(() => setMessage(''), 3000);
-      return;
+        // Show alert message temporarily
+        setMessage('⚠️ Please add product details before scanning next item');
+        setTimeout(() => setMessage(''), 3000);
+        return;
+      }
     }
 
     try {
@@ -941,6 +944,12 @@ export default function CheckoutPage() {
 
       if (response.ok) {
         const product = await response.json();
+
+        // If in price check mode, show price and don't add to cart
+        if (priceCheckMode) {
+          setPriceCheckProduct(product);
+          return;
+        }
 
         // Check inventory levels
         const existingItem = cart.find(item => item.product.upc === product.upc);
@@ -999,9 +1008,16 @@ export default function CheckoutPage() {
         setNotFoundUpc('');
         setTimeout(() => setMessage(''), 7000);
       } else {
-        // Product not found - check for similar products
-        await checkForSimilarProducts(upc);
-        setMessage(''); // Clear any existing message
+        // Product not found
+        if (priceCheckMode) {
+          // In price check mode, just show not found message
+          setMessage(`❌ Product not found: ${upc}`);
+          setTimeout(() => setMessage(''), 3000);
+        } else {
+          // Normal mode - check for similar products
+          await checkForSimilarProducts(upc);
+          setMessage(''); // Clear any existing message
+        }
       }
     } catch (error) {
       setMessage('Error fetching product');
@@ -2193,7 +2209,7 @@ export default function CheckoutPage() {
           }}
           decimal={false}
           maxLength={15}
-          title="Enter UPC Code"
+          title={priceCheckMode ? "Enter UPC for Price Check" : "Enter UPC Code"}
         />
       )}
 
@@ -2202,7 +2218,7 @@ export default function CheckoutPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-black">Search Products</h3>
+              <h3 className="text-xl font-bold text-black">{priceCheckMode ? 'Price Check - Search' : 'Search Products'}</h3>
               <button
                 onClick={() => {
                   setShowSearchModal(false);
@@ -2248,28 +2264,37 @@ export default function CheckoutPage() {
                     <button
                       key={product._id}
                       onClick={() => {
-                        const newCartItem: CartItem = {
-                          product: {
-                            _id: product._id,
-                            upc: product.upc,
-                            name: product.name,
-                            price: product.price,
-                            inventory: product.inventory
-                          },
-                          quantity: 1
-                        };
+                        if (priceCheckMode) {
+                          // In price check mode, show price
+                          setPriceCheckProduct(product);
+                          setShowSearchModal(false);
+                          setShowSearchKeyboard(false);
+                          setSearchQuery('');
+                          setSearchResults([]);
+                        } else {
+                          const newCartItem: CartItem = {
+                            product: {
+                              _id: product._id,
+                              upc: product.upc,
+                              name: product.name,
+                              price: product.price,
+                              inventory: product.inventory
+                            },
+                            quantity: 1
+                          };
 
-                        // Add item to top of cart (prepend instead of append)
-                        setCart([newCartItem, ...cart]);
+                          // Add item to top of cart (prepend instead of append)
+                          setCart([newCartItem, ...cart]);
 
-                        // Show scan feedback in the middle of screen
-                        showScanFeedback(product, `Added: ${product.name} - $${product.price.toFixed(2)}`);
+                          // Show scan feedback in the middle of screen
+                          showScanFeedback(product, `Added: ${product.name} - $${product.price.toFixed(2)}`);
 
-                        // Close modal and reset search
-                        setShowSearchModal(false);
-                        setShowSearchKeyboard(false);
-                        setSearchQuery('');
-                        setSearchResults([]);
+                          // Close modal and reset search
+                          setShowSearchModal(false);
+                          setShowSearchKeyboard(false);
+                          setSearchQuery('');
+                          setSearchResults([]);
+                        }
                       }}
                       className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
                     >
@@ -4389,6 +4414,96 @@ export default function CheckoutPage() {
               <div className="text-xs text-gray-500 mt-4">
                 Tap to dismiss • Auto-dismiss in 3s
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Check Modal */}
+      {priceCheckMode && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform animate-scale-in">
+            <div className="text-center">
+              {/* Price Check Header */}
+              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-10 h-10 text-orange-600" />
+              </div>
+
+              {!priceCheckProduct ? (
+                <>
+                  {/* Waiting for Scan State */}
+                  <h2 className="text-2xl font-bold text-black mb-4">Price Check Mode</h2>
+                  <div className="mb-6">
+                    <p className="text-lg text-gray-700 mb-4">
+                      Please scan barcode for price check...
+                    </p>
+                    <div className="flex justify-center mb-4">
+                      <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      Waiting for barcode scan
+                    </p>
+                  </div>
+
+                  {/* Exit Button */}
+                  <button
+                    onClick={() => {
+                      setPriceCheckMode(false);
+                      setPriceCheckProduct(null);
+                      setPriceCheckBuffer('');
+                    }}
+                    className="w-full bg-gray-200 text-black py-3 px-4 rounded-xl font-semibold hover:bg-gray-300 active:bg-gray-400 transition-colors"
+                  >
+                    Exit Price Check
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Product Info State */}
+                  <h2 className="text-2xl font-bold text-black mb-4">Price Check</h2>
+                  <div className="mb-6">
+                    <h3 className="text-xl font-semibold text-black mb-2">
+                      {priceCheckProduct.name}
+                    </h3>
+                    <div className="text-4xl font-bold text-orange-600 mb-2">
+                      ${priceCheckProduct.price.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      UPC: {priceCheckProduct.upc}
+                    </div>
+                    {priceCheckProduct.inventory !== undefined && (
+                      <div className="text-sm text-gray-600 mt-2">
+                        In Stock: {priceCheckProduct.inventory}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setPriceCheckProduct(null);
+                      }}
+                      className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                    >
+                      Scan Another
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPriceCheckMode(false);
+                        setPriceCheckProduct(null);
+                        setPriceCheckBuffer('');
+                      }}
+                      className="flex-1 bg-gray-200 text-black py-3 px-4 rounded-xl font-semibold hover:bg-gray-300 active:bg-gray-400 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
