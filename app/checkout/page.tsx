@@ -381,14 +381,43 @@ export default function CheckoutPage() {
       { name: 'Extra Cheese', price: 1.00 },
       { name: 'Add Bacon', price: 2.00 },
       { name: 'Add Avocado', price: 2.50 },
-      { name: 'Make it a Combo (+Fries & Drink)', price: 4.00 },
     ],
     burger: [
       { name: 'Extra Patty', price: 3.00 },
       { name: 'Extra Cheese', price: 1.00 },
       { name: 'Add Bacon', price: 2.00 },
       { name: 'Add Avocado', price: 2.50 },
-      { name: 'Make it a Combo (+Fries & Drink)', price: 4.00 },
+    ],
+    quesadilla: [
+      { name: 'Extra Chicken', price: 3.00 },
+      { name: 'Extra Cheese', price: 1.00 },
+      { name: 'Add Sour Cream', price: 1.00 },
+      { name: 'Add Guacamole', price: 2.50 },
+      { name: 'Add Salsa', price: 0.50 },
+    ],
+    platters: [
+      { name: 'Extra Meat', price: 3.00 },
+      { name: 'Extra Rice', price: 2.00 },
+      { name: 'Add Pita Bread', price: 1.00 },
+      { name: 'Extra Sauce', price: 0.50 },
+    ],
+    gyro: [
+      { name: 'Extra Meat', price: 3.00 },
+      { name: 'Extra Tzatziki', price: 1.00 },
+      { name: 'Add Feta', price: 1.50 },
+      { name: 'Add Hot Sauce', price: 0.50 },
+    ],
+    panini: [
+      { name: 'Extra Meat', price: 3.00 },
+      { name: 'Extra Cheese', price: 1.00 },
+      { name: 'Add Avocado', price: 2.50 },
+      { name: 'Add Bacon', price: 2.00 },
+    ],
+    wings: [
+      { name: 'Extra Sauce', price: 0.50 },
+      { name: 'Add Ranch', price: 0.50 },
+      { name: 'Add Blue Cheese', price: 0.50 },
+      { name: 'Make it Spicy', price: 0.00 },
     ],
     sides: [
       { name: 'Extra Sauce', price: 0.50 },
@@ -402,10 +431,16 @@ export default function CheckoutPage() {
     if (name.includes('egg') && name.includes('cheese')) return 'breakfast';
     if (name.includes('omelette') || name.includes('omelet')) return 'omelette';
     if (name.includes('burger')) return 'burger';
+    if (name.includes('quesadilla')) return 'quesadilla';
+    if (name.includes('over rice') || name.includes('platter')) return 'platters';
+    if (name.includes('gyro')) return 'gyro';
+    if (name.includes('panini')) return 'panini';
+    if (name.includes('wings')) return 'wings';
+    if (name.includes('tenders') || name.includes('nuggets')) return 'sides';
     if (name.includes('salad')) return 'salad';
+    if (name.includes('fries') || name.includes('rings') || name.includes('mozzarella')) return 'sides';
     if (name.includes('chicken') || name.includes('beef') || name.includes('turkey') ||
         name.includes('pastrami') || name.includes('philly') || name.includes('chopped')) return 'sandwich';
-    if (name.includes('fries') || name.includes('rings') || name.includes('mozzarella')) return 'sides';
     return 'sandwich'; // default
   };
 
