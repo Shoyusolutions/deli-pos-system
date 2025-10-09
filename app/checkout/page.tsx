@@ -140,6 +140,14 @@ export default function CheckoutPage() {
   const [showModifierModal, setShowModifierModal] = useState(false);
   const [selectedCartItem, setSelectedCartItem] = useState<{name: string, price: number, quantity: number, modifiers?: any[]} | null>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<{[key: string]: number}>({});
+  const [showCustomPriceKeypad, setShowCustomPriceKeypad] = useState(false);
+  const [customAddOnPrice, setCustomAddOnPrice] = useState('');
+
+  // Price check states
+  const [priceCheckMode, setPriceCheckMode] = useState(false);
+  const [priceCheckProduct, setPriceCheckProduct] = useState<Product | null>(null);
+  const [priceCheckBuffer, setPriceCheckBuffer] = useState('');
+  const priceCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimized food menu structure
   const foodMenuOptimized = {
@@ -2351,6 +2359,40 @@ export default function CheckoutPage() {
         />
       )}
 
+      {/* Custom Price Keypad for Modifier */}
+      {showCustomPriceKeypad && (
+        <OnScreenNumpad
+          value={customAddOnPrice}
+          onChange={setCustomAddOnPrice}
+          onClose={() => {
+            setShowCustomPriceKeypad(false);
+            setCustomAddOnPrice('');
+          }}
+          onEnter={() => {
+            if (customAddOnPrice && parseFloat(customAddOnPrice) > 0) {
+              // Add custom price add-on as a modifier
+              const price = parseFloat(customAddOnPrice);
+              const customKey = `Custom Add-On - $${price.toFixed(2)}`;
+
+              // Add to selected modifiers
+              setSelectedModifiers(prev => ({
+                ...prev,
+                [customKey]: 1
+              }));
+
+              setShowCustomPriceKeypad(false);
+              setCustomAddOnPrice('');
+              setMessage(`✓ Added Custom Add-On - $${price.toFixed(2)}`);
+              setTimeout(() => setMessage(''), 3000);
+            }
+          }}
+          decimal={true}
+          maxLength={7}
+          title="Enter Custom Add-On Price"
+          zIndex={10002}
+        />
+      )}
+
       {/* Payment Method Selection Modal */}
       {paymentMode === 'payment' && (
         <div className="fixed inset-0 bg-gray-200 bg-opacity-80 flex items-center justify-center z-50">
@@ -2441,15 +2483,26 @@ export default function CheckoutPage() {
                 {/* Compact Scanner Status */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priceCheckMode ? 'bg-orange-500 animate-pulse' : isScanning ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
                     <span className="text-xs sm:text-sm text-black whitespace-nowrap">
-                      {isScanning ? 'Scanning...' : 'Scanner ready'}
+                      {priceCheckMode ? 'Price Check Mode' : isScanning ? 'Scanning...' : 'Scanner ready'}
                     </span>
                     {isScanning && scanBuffer && (
                       <span className="text-xs font-mono text-black hidden sm:inline">{scanBuffer}</span>
                     )}
                   </div>
                   <div className="flex justify-between items-center gap-6 px-2 py-1">
+                    <button
+                      onClick={() => {
+                        setPriceCheckMode(!priceCheckMode);
+                        setPriceCheckProduct(null);
+                        setPriceCheckBuffer('');
+                      }}
+                      className={`${priceCheckMode ? 'text-white bg-orange-600 hover:bg-orange-700' : 'text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100'} flex items-center gap-2 px-3 py-2 rounded-lg active:bg-orange-200 transition-colors text-sm font-medium`}
+                    >
+                      <Package className="w-4 h-4" />
+                      <span>{priceCheckMode ? 'Exit Price Check' : 'Price Check'}</span>
+                    </button>
                     <button
                       onClick={() => {
                         setShowSearchModal(true);
@@ -3194,6 +3247,13 @@ export default function CheckoutPage() {
                         const updatedModifiers = Object.entries(selectedModifiers)
                           .filter(([_, quantity]) => quantity > 0)
                           .flatMap(([name, quantity]) => {
+                            // Check if this is a custom add-on
+                            if (name.startsWith('Custom Add-On - $')) {
+                              const priceMatch = name.match(/\$(\d+\.?\d*)/);
+                              const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+                              return Array(quantity).fill({name: 'Custom Add-On', price: price, quantity: 1});
+                            }
+
                             const modifier = modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]
                               ?.find(m => m.name === name);
                             if (modifier) {
@@ -3229,12 +3289,12 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-3 mb-3 flex-shrink-0">
                     <button
                       onClick={() => {
-                        // Add combo version directly without selection
-                        const comboName = `${selectedCartItem?.name || ''} Combo`;
-                        const comboPrice = (selectedCartItem?.price || 0) + comboUpcharge;
+                        // Add combo as a separate line item with its own price
+                        const comboName = `  → Combo for ${selectedCartItem?.name || ''}`;
 
-                        const existingItem = foodCart.find(cartItem => cartItem.name === comboName);
-                        if (existingItem) {
+                        // Check if combo already exists for this item
+                        const existingCombo = foodCart.find(cartItem => cartItem.name === comboName);
+                        if (existingCombo) {
                           // Increase quantity if combo already exists
                           setFoodCart(foodCart.map(cartItem =>
                             cartItem.name === comboName
@@ -3242,19 +3302,46 @@ export default function CheckoutPage() {
                               : cartItem
                           ));
                         } else {
-                          // Add new combo item
-                          setFoodCart([...foodCart, {name: comboName, price: comboPrice, quantity: 1}]);
+                          // Add combo as new line item with just the upcharge price
+                          // Find the index of the original item to insert combo after it
+                          const originalIndex = foodCart.findIndex(item => item === selectedCartItem);
+                          const newFoodCart = [...foodCart];
+                          const comboItem = {
+                            name: comboName,
+                            price: comboUpcharge,
+                            quantity: 1,
+                            isCombo: true,
+                            parentItem: selectedCartItem?.name
+                          };
+
+                          if (originalIndex !== -1) {
+                            // Insert combo right after the original item
+                            newFoodCart.splice(originalIndex + 1, 0, comboItem);
+                          } else {
+                            // If original item not found, add to end
+                            newFoodCart.push(comboItem);
+                          }
+                          setFoodCart(newFoodCart);
                         }
 
                         setShowModifierModal(false);
                         setSelectedCartItem(null);
                         setSelectedModifiers({});
-                        setMessage(`✓ Added: ${comboName}`);
+                        setMessage(`✓ Added Combo`);
                         setTimeout(() => setMessage(''), 3000);
                       }}
                       className="px-4 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm"
                     >
                       Add Combo +$4.00
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowCustomPriceKeypad(true);
+                      }}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+                    >
+                      OPEN KEY
                     </button>
                   </div>
 
@@ -3262,6 +3349,7 @@ export default function CheckoutPage() {
                     Select Add-Ons
                   </p>
                   <div className="flex-1 grid grid-cols-2 gap-2 p-2 content-start overflow-y-auto">
+                    {/* Regular modifiers */}
                     {modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]?.map((modifier) => {
                       const quantity = selectedModifiers[modifier.name] || 0;
                       return (
@@ -3308,6 +3396,40 @@ export default function CheckoutPage() {
                         </div>
                       );
                     })}
+
+                    {/* Custom add-ons added via OPEN KEY */}
+                    {Object.entries(selectedModifiers)
+                      .filter(([name, quantity]) => name.startsWith('Custom Add-On - $') && quantity > 0)
+                      .map(([name, quantity]) => {
+                        const priceMatch = name.match(/\$(\d+\.?\d*)/);
+                        const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+                        return (
+                          <div
+                            key={name}
+                            className="h-[140px] relative p-3 rounded-lg border-2 border-blue-500 bg-blue-50"
+                          >
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                              <span className="font-semibold text-black text-base block">Custom Add-On</span>
+                              <div className="text-green-600 font-bold text-sm mt-1">
+                                +${price.toFixed(2)}
+                              </div>
+                              <span className="text-black font-bold text-lg mt-2">{quantity}x</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedModifiers(prev => {
+                                  const newModifiers = {...prev};
+                                  delete newModifiers[name];
+                                  return newModifiers;
+                                });
+                              }}
+                              className="absolute top-1 left-1 w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-red-600 z-10"
+                            >
+                              −
+                            </button>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               </div>
@@ -3513,7 +3635,7 @@ export default function CheckoutPage() {
                                   <span className="text-black font-bold text-sm">${totalPrice.toFixed(2)}</span>
                                 </div>
                                 {item.modifiers && item.modifiers.length > 0 && (
-                                  <div className="pl-4 text-xs text-gray-600">
+                                  <div className="pl-4 space-y-1 mt-1">
                                     {(() => {
                                       // Group modifiers by name and count
                                       const modifierCounts: {[key: string]: {count: number, price: number}} = {};
@@ -3525,8 +3647,13 @@ export default function CheckoutPage() {
                                       });
 
                                       return Object.entries(modifierCounts).map(([name, data]) => (
-                                        <div key={name}>
-                                          + {data.count > 1 ? `${data.count}x ` : ''}{name} (+${(data.price * data.count).toFixed(2)})
+                                        <div key={name} className="flex justify-between items-center">
+                                          <span className="text-xs text-gray-600">
+                                            → {data.count > 1 ? `${data.count}x ` : ''}{name}
+                                          </span>
+                                          <span className="text-xs font-semibold text-black">
+                                            ${(data.price * data.count).toFixed(2)}
+                                          </span>
                                         </div>
                                       ));
                                     })()}
