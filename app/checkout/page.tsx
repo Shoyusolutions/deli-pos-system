@@ -1167,9 +1167,19 @@ export default function CheckoutPage() {
       setWeightInput('');
       setShowWeightModal(true);
     } else {
-      // For all other items, show customization options
-      setSelectedBaseItem(item);
-      setShowOptionModal(true);
+      // For regular items without customizations, add directly to food cart
+      const existingItem = foodCart.find(cartItem => cartItem.name === item.name);
+      if (existingItem) {
+        setFoodCart(foodCart.map(cartItem =>
+          cartItem.name === item.name
+            ? {...cartItem, quantity: cartItem.quantity + 1}
+            : cartItem
+        ));
+      } else {
+        setFoodCart([...foodCart, {name: item.name, price: item.price, quantity: 1}]);
+      }
+      setMessage(`✓ Added: ${item.name}`);
+      setTimeout(() => setMessage(''), 2000);
     }
   };
 
