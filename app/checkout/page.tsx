@@ -3111,7 +3111,7 @@ export default function CheckoutPage() {
                         const updatedModifiers = Object.entries(selectedModifiers)
                           .filter(([_, quantity]) => quantity > 0)
                           .flatMap(([name, quantity]) => {
-                            const modifier = modifierConfigs[getModifierType(selectedCartItem.name) as keyof typeof modifierConfigs]
+                            const modifier = modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]
                               ?.find(m => m.name === name);
                             if (modifier) {
                               // Create an array with one entry for each quantity
@@ -3139,7 +3139,7 @@ export default function CheckoutPage() {
                     </button>
                   </div>
                   <h3 className="text-lg font-bold text-black text-center flex-shrink-0">
-                    Customize {selectedCartItem.name}
+                    Customize {selectedCartItem?.name || ''}
                   </h3>
 
                   {/* Combo Option Section - Simplified */}
@@ -3147,8 +3147,8 @@ export default function CheckoutPage() {
                     <button
                       onClick={() => {
                         // Add combo version directly without selection
-                        const comboName = `${selectedCartItem.name} Combo`;
-                        const comboPrice = selectedCartItem.price + comboUpcharge;
+                        const comboName = `${selectedCartItem?.name || ''} Combo`;
+                        const comboPrice = (selectedCartItem?.price || 0) + comboUpcharge;
 
                         const existingItem = foodCart.find(cartItem => cartItem.name === comboName);
                         if (existingItem) {
@@ -3179,7 +3179,7 @@ export default function CheckoutPage() {
                     Select Add-Ons
                   </p>
                   <div className="flex-1 grid grid-cols-2 gap-2 p-2 content-start overflow-y-auto">
-                    {modifierConfigs[getModifierType(selectedCartItem.name) as keyof typeof modifierConfigs]?.map((modifier) => {
+                    {modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]?.map((modifier) => {
                       const quantity = selectedModifiers[modifier.name] || 0;
                       return (
                         <div
