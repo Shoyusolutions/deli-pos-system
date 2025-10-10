@@ -34,6 +34,7 @@ export default function CheckoutPage() {
   const [showCashNumpad, setShowCashNumpad] = useState(false);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [screenFlash, setScreenFlash] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [showCardConfirmation, setShowCardConfirmation] = useState(false);
 
   // Store settings
@@ -862,6 +863,14 @@ export default function CheckoutPage() {
     }
     document.body.focus();
 
+    // Debug logging function with visual display
+    const addDebugInfo = (message: string) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const debugMessage = `${timestamp}: ${message}`;
+      console.log(debugMessage);
+      setDebugInfo(prev => [...prev.slice(-4), debugMessage]); // Keep last 5 messages
+    };
+
     // Server logging function
     const logToServer = async (message: string, data?: any) => {
       try {
@@ -890,6 +899,7 @@ export default function CheckoutPage() {
       };
 
       console.log('🔍 Key event:', e.key, 'Code:', e.code, 'Which:', e.which, 'Type:', e.type);
+      addDebugInfo(`🔍 Key: ${e.key} Code: ${e.code}`);
       logToServer('🔍 Scanner Key Event', logData);
 
       // Only ignore keypresses when user is actively typing in visible form inputs
@@ -899,6 +909,7 @@ export default function CheckoutPage() {
         const isVisibleInput = target.offsetParent !== null && !target.hasAttribute('readonly');
         if (isVisibleInput && document.activeElement === target) {
           console.log('🚫 Ignoring - user actively typing in input field');
+          addDebugInfo(`🚫 Ignoring - typing in ${target.tagName}`);
           logToServer('🚫 Ignoring key - user actively typing', { target: target.tagName });
           return;
         }
@@ -928,6 +939,7 @@ export default function CheckoutPage() {
       // Build up the scan buffer for numbers
       if (e.key >= '0' && e.key <= '9') {
         console.log('✅ Processing digit:', e.key);
+        addDebugInfo(`✅ Processing digit: ${e.key}`);
         logToServer('✅ Processing digit', { key: e.key, currentBuffer: scanBuffer });
         e.preventDefault();
         setScanBuffer(prev => {
@@ -1761,6 +1773,15 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col relative">
+      {/* Debug Info Display */}
+      {debugInfo.length > 0 && (
+        <div className="fixed top-4 right-4 bg-black bg-opacity-80 text-white p-2 rounded text-xs z-50 max-w-md">
+          <div className="font-bold mb-1">Scanner Debug:</div>
+          {debugInfo.map((info, index) => (
+            <div key={index} className="font-mono text-xs">{info}</div>
+          ))}
+        </div>
+      )}
       {/* Similar Product Found Dialog */}
       {showSimilarProductDialog && similarProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
