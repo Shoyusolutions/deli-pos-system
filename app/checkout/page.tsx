@@ -6,6 +6,7 @@ import { Keyboard, Package, X, Plus, ShoppingCart } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 import StripeTerminal from '@/components/StripeTerminal';
+import MobilePayment from '@/components/MobilePayment';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 
 interface Product {
@@ -4526,10 +4527,23 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6">
+                      {/* Mobile Tap to Pay Option */}
+                      <div className="border-2 border-purple-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-black mb-4">📱 Mobile Payment</h3>
+                        {storeId && (
+                          <MobilePayment
+                            amount={getTotal('card')}
+                            storeId={storeId}
+                            onPaymentSuccess={handleStripePaymentSuccess}
+                            onPaymentError={handleStripePaymentError}
+                          />
+                        )}
+                      </div>
+
                       {/* Stripe Terminal Option */}
                       <div className="border-2 border-blue-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-black mb-4">M2 Card Reader (Recommended)</h3>
+                        <h3 className="text-lg font-semibold text-black mb-4">M2 Card Reader</h3>
                         {storeId && (
                           <StripeTerminal
                             amount={getTotal('card')}

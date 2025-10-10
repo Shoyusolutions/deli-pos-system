@@ -85,21 +85,28 @@ export default function StripeTerminal({
     setStatus('Searching for readers...');
 
     try {
+      console.log('Starting reader discovery...');
       const { discoveredReaders } = await terminal.discoverReaders({
         simulated: false,
       });
 
+      console.log(`Found ${discoveredReaders.length} readers:`, discoveredReaders);
+
       if (discoveredReaders.length === 0) {
-        setStatus('No readers found. Make sure M2 is powered on and nearby.');
+        setStatus('No readers found. Make sure M2 is registered to this location and powered on.');
         setIsConnecting(false);
         return;
       }
 
+      // Show all available readers
+      const readerInfo = discoveredReaders.map((r: any) => `${r.label || 'Unknown'} (${r.serial_number || 'No Serial'})`).join(', ');
+      setStatus(`Found readers: ${readerInfo}. Connecting to first...`);
+
       const reader = discoveredReaders[0];
       await connectToReader(reader);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Reader discovery error:', error);
-      setStatus('Failed to discover readers');
+      setStatus(`Discovery failed: ${error.message || 'Unknown error'}`);
       setIsConnecting(false);
     }
   };
@@ -108,7 +115,9 @@ export default function StripeTerminal({
     if (!terminal) return;
 
     try {
-      setStatus(`Connecting to ${reader.label}...`);
+      setStatus(`Connecting to ${reader.label || reader.serial_number}...`);
+      console.log('Connecting to reader:', reader);
+      console.log('Location ID:', process.env.NEXT_PUBLIC_STRIPE_LOCATION_ID);
 
       const { reader: connectedReader } = await terminal.connectBluetoothReader(
         reader,
@@ -116,11 +125,12 @@ export default function StripeTerminal({
       );
 
       setReader(connectedReader);
-      setStatus(`Connected to ${connectedReader.label}`);
+      setStatus(`Connected to ${connectedReader.label || connectedReader.serial_number}`);
       setIsConnecting(false);
-    } catch (error) {
+      console.log('Successfully connected to reader:', connectedReader);
+    } catch (error: any) {
       console.error('Reader connection error:', error);
-      setStatus('Failed to connect to reader');
+      setStatus(`Connection failed: ${error.message || 'Unknown error'}`);
       setIsConnecting(false);
     }
   };

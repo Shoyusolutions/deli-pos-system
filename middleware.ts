@@ -4,7 +4,7 @@ import { verifyToken } from './lib/auth-middleware';
 import { verifyQRToken } from './lib/qrAuth';
 
 // Public routes that don't require authentication
-const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db', '/api/qr-auth'];
+const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db', '/api/qr-auth', '/api/stripe/terminal/connection-token'];
 
 // Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
