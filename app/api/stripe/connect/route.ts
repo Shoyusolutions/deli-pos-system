@@ -43,6 +43,33 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ accountId: account.id });
       }
 
+      case 'assign_account': {
+        const store = await Store.findById(storeId);
+        if (!store) {
+          return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+        }
+
+        // Verify the account exists by checking its status
+        const account = await getAccountStatus(accountId);
+        if (!account) {
+          return NextResponse.json({ error: 'Stripe account not found' }, { status: 404 });
+        }
+
+        await Store.findByIdAndUpdate(storeId, {
+          stripeConnectAccountId: accountId
+        });
+
+        return NextResponse.json({
+          success: true,
+          accountId: accountId,
+          accountStatus: {
+            charges_enabled: account.charges_enabled,
+            details_submitted: account.details_submitted,
+            payouts_enabled: account.payouts_enabled,
+          }
+        });
+      }
+
       case 'create_account_link': {
         if (!accountId) {
           return NextResponse.json({ error: 'Account ID required' }, { status: 400 });
