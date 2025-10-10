@@ -89,14 +89,29 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
 
     setShowQRCode(true);
     setLoading(true);
-    setMessage('📱 Scan this QR code with your phone to complete setup safely');
-
-    const baseUrl = window.location.origin;
-    const mobileUrl = `${baseUrl}/mobile-onboard?storeId=${storeId}&sessionId=${sessionId}`;
+    setMessage('🔐 Generating secure QR code...');
 
     try {
+      // Generate secure tokens
+      const response = await fetch('/api/qr-auth/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          sessionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate secure tokens');
+      }
+
+      const { secureUrl } = await response.json();
+
+      setMessage('📱 Scan this secure QR code with your phone');
+
       if (qrCanvasRef.current) {
-        await QRCode.toCanvas(qrCanvasRef.current, mobileUrl, {
+        await QRCode.toCanvas(qrCanvasRef.current, secureUrl, {
           width: 200,
           margin: 2,
           color: {
@@ -106,8 +121,11 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
         });
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
-      setMessage('❌ Error generating QR code');
+      console.error('Error generating secure QR code:', error);
+      setMessage('❌ Error generating secure QR code');
+      setShowQRCode(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -214,10 +232,10 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
                 <div className="flex items-start gap-3">
                   <Smartphone className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-blue-800">🔒 Recommended: Use Your Phone</h4>
+                    <h4 className="font-medium text-blue-800">🔒 Recommended: Secure Phone Setup</h4>
                     <p className="text-sm text-blue-700 mt-1">
-                      Complete setup on your phone for better security and compatibility.
-                      Perfect for ELO devices with limited browser capabilities.
+                      Secure auto-login via encrypted QR code. Perfect for ELO devices with browser limitations.
+                      QR codes expire in 15 minutes for security.
                     </p>
                   </div>
                 </div>
@@ -269,7 +287,7 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
                     📱 Scan with your phone camera
                   </p>
                   <p className="text-xs text-gray-500">
-                    {loading ? '⏳ Waiting for setup completion...' : '✅ QR Code Ready'}
+                    {loading ? '⏳ Waiting for setup completion...' : '🔐 Secure QR Ready (expires in 15 min)'}
                   </p>
                 </div>
               </div>

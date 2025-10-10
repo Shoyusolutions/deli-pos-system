@@ -6,24 +6,81 @@ import { CheckCircle, AlertCircle, CreditCard, ExternalLink, Smartphone } from '
 
 function MobileOnboardContent() {
   const searchParams = useSearchParams();
-  const storeId = searchParams?.get('storeId');
-  const sessionId = searchParams?.get('sessionId');
+
+  // New secure token-based authentication
+  const token = searchParams?.get('token');
+  const sessionToken = searchParams?.get('session');
+
+  // Legacy support (fallback)
+  const legacyStoreId = searchParams?.get('storeId');
+  const legacySessionId = searchParams?.get('sessionId');
+
+  const [storeId, setStoreId] = useState<string | null>(legacyStoreId);
+  const [sessionId, setSessionId] = useState<string | null>(legacySessionId);
 
   const [loading, setLoading] = useState(false);
   const [accountStatus, setAccountStatus] = useState<any>(null);
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [step, setStep] = useState<'welcome' | 'creating' | 'onboarding' | 'completed'>('welcome');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!storeId || !sessionId) {
-      setMessage('Invalid QR code. Please scan again from the POS system.');
-      return;
+    // If we have secure tokens, validate them first
+    if (token && sessionToken) {
+      validateSecureTokens();
+    } else if (legacyStoreId && legacySessionId) {
+      // Legacy support - direct access
+      setAuthenticated(true);
+      checkExistingAccount();
+    } else {
+      setAuthError('Invalid QR code. Please scan again from the POS system.');
     }
+  }, [token, sessionToken, legacyStoreId, legacySessionId]);
 
-    // Check if account already exists
-    checkExistingAccount();
-  }, [storeId, sessionId]);
+  const validateSecureTokens = async () => {
+    setLoading(true);
+    setMessage('🔐 Authenticating securely...');
+
+    try {
+      const response = await fetch('/api/qr-auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, sessionToken })
+      });
+
+      if (response.ok) {
+        const { storeId: validatedStoreId, sessionId: validatedSessionId } = await response.json();
+        setStoreId(validatedStoreId);
+        setSessionId(validatedSessionId);
+        setAuthenticated(true);
+        setMessage('✅ Securely authenticated! Loading your setup...');
+
+        // Now check existing account
+        setTimeout(() => {
+          checkExistingAccount();
+        }, 1000);
+      } else {
+        const error = await response.json();
+        setAuthError(error.error || 'Authentication failed');
+        setMessage('❌ ' + (error.error || 'Authentication failed'));
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setAuthError('Network error during authentication');
+      setMessage('❌ Network error during authentication');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Only proceed if authenticated and we have valid IDs
+    if (authenticated && storeId && sessionId) {
+      checkExistingAccount();
+    }
+  }, [authenticated, storeId, sessionId]);
 
   const checkExistingAccount = async () => {
     try {
@@ -181,13 +238,31 @@ function MobileOnboardContent() {
     handleStatusCheck();
   }, [searchParams]);
 
-  if (!storeId || !sessionId) {
+  if (authError) {
     return (
       <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Invalid QR Code</h1>
-          <p className="text-gray-600">Please scan the QR code again from your POS system.</p>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">🔒 Authentication Failed</h1>
+          <p className="text-gray-600 mb-4">{authError}</p>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-sm text-yellow-800">
+              💡 <strong>Tip:</strong> QR codes expire after 15 minutes for security.
+              Please generate a new QR code from your POS system.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated || !storeId || !sessionId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">🔐 Secure Authentication</h2>
+          <p className="text-gray-600">{message || 'Verifying your secure access...'}</p>
         </div>
       </div>
     );
