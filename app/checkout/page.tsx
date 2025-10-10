@@ -857,15 +857,19 @@ export default function CheckoutPage() {
     if (paymentMode !== 'idle' || showFoodSelection || showOptionModal || showModifierModal) return;
 
     const handleGlobalKeyPress = (e: KeyboardEvent) => {
+      console.log('🔍 Key event:', e.key, 'Code:', e.code, 'Which:', e.which, 'Type:', e.type);
+
       // Ignore keypresses when user is typing in form inputs
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
+        console.log('🚫 Ignoring - user in input field');
         return;
       }
 
       // Allow scanning in price check mode and when adding new items
       // Only block when there's an unresolved product and NOT in price check mode
       if (!priceCheckMode && notFoundUpc && !showAddProduct) {
+        console.log('🚫 Blocking scan - unresolved item exists');
         // If it looks like a scan attempt (numbers or Enter with buffer)
         if ((e.key >= '0' && e.key <= '9') || (e.key === 'Enter' && scanBuffer.length > 0)) {
           e.preventDefault();
@@ -884,8 +888,11 @@ export default function CheckoutPage() {
 
       // Build up the scan buffer for numbers
       if (e.key >= '0' && e.key <= '9') {
+        console.log('✅ Processing digit:', e.key);
+        e.preventDefault();
         setScanBuffer(prev => {
           const newBuffer = prev + e.key;
+          console.log('📝 Buffer updated:', newBuffer);
           setIsScanning(true);
 
           // Clear previous timeout
@@ -896,27 +903,56 @@ export default function CheckoutPage() {
           // Set new timeout - scanner typically sends all digits quickly
           scanTimeoutRef.current = setTimeout(() => {
             // Auto-submit if we have a complete barcode (8+ digits)
-            if (newBuffer.length >= 8) {
-              handleScanComplete(newBuffer);
-            }
-            setScanBuffer('');
-            setIsScanning(false);
+            setScanBuffer(currentBuffer => {
+              console.log('⏰ Timeout triggered, buffer:', currentBuffer);
+              if (currentBuffer.length >= 8) {
+                console.log('✅ Processing complete barcode:', currentBuffer);
+                handleScanComplete(currentBuffer);
+                setMessage(`🔍 Scanned: ${currentBuffer}`);
+              } else if (currentBuffer.length > 0) {
+                console.log('⚠️ Incomplete barcode:', currentBuffer);
+                setMessage(`⚠️ Incomplete barcode: ${currentBuffer} (need 8+ digits)`);
+              }
+              setIsScanning(false);
+              return '';
+            });
           }, 300);
 
           return newBuffer;
         });
       } else if (e.key === 'Enter' && scanBuffer.length > 0) {
+        console.log('↵ Enter pressed with buffer:', scanBuffer);
         // Scanner pressed enter after UPC
         e.preventDefault();
         handleScanComplete(scanBuffer);
         setScanBuffer('');
         setIsScanning(false);
+      } else {
+        console.log('❓ Unhandled key:', e.key);
       }
     };
 
+    // Listen to multiple event types to catch scanner input
+    const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('🔍 KeyDown event:', e.key, 'Code:', e.code, 'Which:', e.which);
+      // Some scanners use keydown instead of keypress
+      if (e.key >= '0' && e.key <= '9') {
+        handleGlobalKeyPress(e);
+      }
+    };
+
+    const handleInput = (e: Event) => {
+      console.log('🔍 Input event:', e);
+    };
+
     document.addEventListener('keypress', handleGlobalKeyPress);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('input', handleInput);
+
     return () => {
       document.removeEventListener('keypress', handleGlobalKeyPress);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('input', handleInput);
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
       }
