@@ -891,6 +891,67 @@ export default function CheckoutPage() {
       }
     };
 
+    // Handle scanner digit input with debouncing
+    const handleScannerDigit = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Only ignore if user is actively typing in a focused input
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
+        const isVisibleInput = target.offsetParent !== null && !target.hasAttribute('readonly');
+        if (isVisibleInput && document.activeElement === target) {
+          addDebugInfo(`🚫 Ignoring digit "${e.key}" - user typing in ${target.tagName}`);
+          return;
+        }
+      }
+
+      // Block when there's an unresolved product (not in price check mode)
+      if (!priceCheckMode && notFoundUpc && !showAddProduct) {
+        addDebugInfo(`🚫 Blocking digit "${e.key}" - unresolved item exists`);
+        e.preventDefault();
+        setScreenFlash(true);
+        setTimeout(() => setScreenFlash(false), 500);
+        setMessage('⚠️ Please add product details before scanning next item');
+        setTimeout(() => setMessage(''), 3000);
+        setScanBuffer('');
+        setIsScanning(false);
+        return;
+      }
+
+      // Process the digit
+      e.preventDefault();
+      addDebugInfo(`✅ Processing scanner digit: "${e.key}"`);
+      setIsScanning(true);
+
+      // Clear previous timeout
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+
+      setScanBuffer(prev => {
+        const newBuffer = prev + e.key;
+        addDebugInfo(`📝 Scanner buffer updated: "${newBuffer}" (length: ${newBuffer.length})`);
+
+        // Set timeout to complete scan automatically
+        scanTimeoutRef.current = setTimeout(() => {
+          setScanBuffer(currentBuffer => {
+            addDebugInfo(`⏰ Scanner timeout triggered, buffer: "${currentBuffer}"`);
+            if (currentBuffer.length >= 8) {
+              addDebugInfo(`✅ Processing complete barcode: "${currentBuffer}"`);
+              handleScanComplete(currentBuffer);
+              setMessage(`🔍 Scanned: ${currentBuffer}`);
+            } else if (currentBuffer.length > 0) {
+              addDebugInfo(`⚠️ Incomplete barcode: "${currentBuffer}" (need 8+ digits)`);
+              setMessage(`⚠️ Incomplete barcode: ${currentBuffer} (need 8+ digits)`);
+            }
+            setIsScanning(false);
+            return '';
+          });
+        }, 300);
+
+        return newBuffer;
+      });
+    };
+
     const handleGlobalKeyPress = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const logData = {
@@ -1016,11 +1077,18 @@ export default function CheckoutPage() {
         timestamp: Date.now()
       };
       console.log('🔍 KeyDown event:', e.key, 'Code:', e.code, 'Which:', e.which);
-      logToServer('🔍 KeyDown Event', keyDownData);
+      addDebugInfo(`🔍 KeyDown: "${e.key}" Code: ${e.code}`, keyDownData);
 
-      // Some scanners use keydown instead of keypress
+      // Scanner sends keydown events - process them directly
       if (e.key >= '0' && e.key <= '9') {
-        handleGlobalKeyPress(e);
+        // Process the digit in keydown since scanner uses this event type
+        handleScannerDigit(e);
+      } else if (e.key === 'Enter' && scanBuffer.length > 0) {
+        e.preventDefault();
+        addDebugInfo(`↵ Enter from KeyDown with buffer: ${scanBuffer}`);
+        handleScanComplete(scanBuffer);
+        setScanBuffer('');
+        setIsScanning(false);
       }
     };
 
