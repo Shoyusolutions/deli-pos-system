@@ -1837,7 +1837,7 @@ export default function CheckoutPage() {
           }
 
           setPaymentMode('success');
-          setMessage(`✅ Transaction ${transaction.transactionNumber} completed successfully!`);
+          setMessage(`Transaction ${transaction.transactionNumber} completed successfully!`);
           setProcessingTransaction(false);
         } else {
           // For cash, don't clear anything - let user manually proceed from change screen
@@ -3247,9 +3247,22 @@ export default function CheckoutPage() {
                             }
 
                             // Add modifiers if combo is selected
-                            const modifiers = optionModalComboSelected
+                            const baseModifiers = optionModalComboSelected
                               ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
                               : [];
+
+                            // Add customization modifiers if any exist
+                            const customModifiers: any[] = [];
+                            Object.entries(selectedModifiers).forEach(([name, count]) => {
+                              for (let j = 0; j < count; j++) {
+                                const modConfig = modifierConfigs[getModifierType(fullName) as keyof typeof modifierConfigs];
+                                const modifierDef = modConfig?.find(m => m.name === name);
+                                const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
+                                customModifiers.push({ name, price, quantity: 1 });
+                              }
+                            });
+
+                            const allModifiers = [...baseModifiers, ...customModifiers];
 
                             // Add item with quantity
                             for (let i = 0; i < optionModalQuantity; i++) {
@@ -3257,7 +3270,7 @@ export default function CheckoutPage() {
                                 name: fullName,
                                 price: finalPrice,
                                 quantity: 1,
-                                modifiers: [...modifiers]
+                                modifiers: [...allModifiers]
                               };
                               setFoodCart([...foodCart, newItem]);
                             }
@@ -3278,9 +3291,22 @@ export default function CheckoutPage() {
                           }
 
                           // Add modifiers if combo is selected
-                          const modifiers = optionModalComboSelected
+                          const baseModifiers = optionModalComboSelected
                             ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
                             : [];
+
+                          // Add customization modifiers if any exist
+                          const customModifiers: any[] = [];
+                          Object.entries(selectedModifiers).forEach(([name, count]) => {
+                            for (let j = 0; j < count; j++) {
+                              const modConfig = modifierConfigs[getModifierType(fullName) as keyof typeof modifierConfigs];
+                              const modifierDef = modConfig?.find(m => m.name === name);
+                              const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
+                              customModifiers.push({ name, price, quantity: 1 });
+                            }
+                          });
+
+                          const allModifiers = [...baseModifiers, ...customModifiers];
 
                           // Add item with quantity
                           for (let i = 0; i < optionModalQuantity; i++) {
@@ -3288,7 +3314,7 @@ export default function CheckoutPage() {
                               name: fullName,
                               price: finalPrice,
                               quantity: 1,
-                              modifiers: [...modifiers]
+                              modifiers: [...allModifiers]
                             };
                             setFoodCart([...foodCart, newItem]);
                           }
@@ -3296,10 +3322,13 @@ export default function CheckoutPage() {
 
                         // Close modal and reset
                         setShowOptionModal(false);
+                        setShowModifierModal(false);
                         setSelectedBaseItem(null);
                         setSelectedOptions({});
                         setMultiSelectOptions({});
                         setSelectedCartItem(null);
+                        setSelectedModifiers({});
+                        setComboSelected(false);
                         setOptionModalQuantity(1);
                         setOptionModalComboSelected(false);
                       }}
@@ -3898,18 +3927,44 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Apply button for customizing items */}
-                  {(selectedCartItem as any)?.isCustomizing && (
+                  {selectedCartItem && showModifierModal && (
                     <div className="flex gap-2 p-3 border-t bg-gray-50">
                       <button
                         onClick={() => {
                           // Apply customizations and add to cart
                           const item: any = selectedCartItem;
-                          if (item && item.baseSelection) {
-                            const baseSelection = item.baseSelection;
+                          if (item) {
+                            if (item.baseSelection) {
+                              // Handle items from option modal (with baseSelection)
+                              const baseSelection = item.baseSelection;
 
-                            // Build the final items with modifiers
-                            const newItems = [];
-                            for (let i = 0; i < baseSelection.quantity; i++) {
+                              // Build the final items with modifiers
+                              const newItems = [];
+                              for (let i = 0; i < baseSelection.quantity; i++) {
+                                // Build modifiers array from selectedModifiers
+                                const modifiers: any[] = [];
+                                Object.entries(selectedModifiers).forEach(([name, count]) => {
+                                  for (let j = 0; j < count; j++) {
+                                    const modConfig = modifierConfigs[getModifierType(item.name) as keyof typeof modifierConfigs];
+                                    const modifierDef = modConfig?.find(m => m.name === name);
+                                    const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
+                                    modifiers.push({ name, price, quantity: 1 });
+                                  }
+                                });
+
+                                const newItem = {
+                                  name: item.name,
+                                  price: item.price,
+                                  quantity: 1,
+                                  modifiers: modifiers
+                                };
+                                newItems.push(newItem);
+                              }
+
+                              // Add all items to cart
+                              setFoodCart([...foodCart, ...newItems]);
+                            } else {
+                              // Handle existing cart items being customized
                               // Build modifiers array from selectedModifiers
                               const modifiers: any[] = [];
                               Object.entries(selectedModifiers).forEach(([name, count]) => {
@@ -3921,17 +3976,18 @@ export default function CheckoutPage() {
                                 }
                               });
 
-                              const newItem = {
-                                name: item.name,
-                                price: item.price,
-                                quantity: 1,
+                              // Update the existing cart item with new modifiers
+                              const updatedItem = {
+                                ...item,
                                 modifiers: modifiers
                               };
-                              newItems.push(newItem);
-                            }
 
-                            // Add all items to cart
-                            setFoodCart([...foodCart, ...newItems]);
+                              // Replace the existing item in cart
+                              const updatedCart = foodCart.map(cartItem =>
+                                cartItem === item ? updatedItem : cartItem
+                              );
+                              setFoodCart(updatedCart);
+                            }
 
                             // Close both modals
                             setShowModifierModal(false);
@@ -4527,46 +4583,54 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6">
-                      {/* Mobile Tap to Pay Option */}
-                      <div className="border-2 border-purple-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-black mb-4">📱 Mobile Payment</h3>
-                        {storeId && (
-                          <MobilePayment
-                            amount={getTotal('card')}
-                            storeId={storeId}
-                            onPaymentSuccess={handleStripePaymentSuccess}
-                            onPaymentError={handleStripePaymentError}
-                          />
-                        )}
-                      </div>
+                    <div className="grid md:grid-cols-1 gap-6">
+                      {/* Mobile Tap to Pay Option - TEMPORARILY HIDDEN */}
+                      {false && (
+                        <div className="border-2 border-purple-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-black mb-4">📱 Mobile Payment</h3>
+                          {storeId && (
+                            <MobilePayment
+                              amount={getTotal('card')}
+                              storeId={storeId}
+                              onPaymentSuccess={handleStripePaymentSuccess}
+                              onPaymentError={handleStripePaymentError}
+                            />
+                          )}
+                        </div>
+                      )}
 
-                      {/* Stripe Terminal Option */}
-                      <div className="border-2 border-blue-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-black mb-4">M2 Card Reader</h3>
-                        {storeId && (
-                          <StripeTerminal
-                            amount={getTotal('card')}
-                            storeId={storeId}
-                            onPaymentSuccess={handleStripePaymentSuccess}
-                            onPaymentError={handleStripePaymentError}
-                          />
-                        )}
-                      </div>
+                      {/* Stripe Terminal Option - TEMPORARILY HIDDEN */}
+                      {false && (
+                        <div className="border-2 border-blue-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-black mb-4">M2 Card Reader</h3>
+                          {storeId && (
+                            <StripeTerminal
+                              amount={getTotal('card')}
+                              storeId={storeId}
+                              onPaymentSuccess={handleStripePaymentSuccess}
+                              onPaymentError={handleStripePaymentError}
+                            />
+                          )}
+                        </div>
+                      )}
 
                       {/* Manual Terminal Option */}
-                      <div className="border-2 border-gray-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-black mb-4">Manual Terminal</h3>
-                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                          <p className="text-black font-medium">Process payment on external terminal</p>
-                          <p className="text-sm text-black mt-1">Once payment is completed, click below</p>
+                      <div className="border-2 border-gray-200 rounded-lg p-8">
+                        <div className="text-center">
+                          <h3 className="text-3xl font-bold text-black mb-6">Payment</h3>
+                          <div className="bg-blue-50 p-6 rounded-lg mb-6">
+                            <p className="text-2xl font-bold text-blue-800">
+                              ${getTotal('card').toFixed(2)}
+                            </p>
+                            <p className="text-sm text-blue-600 mt-2">Amount to collect</p>
+                          </div>
+                          <button
+                            onClick={() => setShowCardConfirmation(true)}
+                            className="w-full bg-green-600 text-white py-4 px-6 rounded-lg hover:bg-green-700 font-bold text-xl"
+                          >
+                            Payment Completed
+                          </button>
                         </div>
-                        <button
-                          onClick={() => setShowCardConfirmation(true)}
-                          className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium"
-                        >
-                          Payment Completed
-                        </button>
                       </div>
                     </div>
 
@@ -4589,20 +4653,28 @@ export default function CheckoutPage() {
             {/* Card Payment Confirmation Modal */}
             {showCardConfirmation && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4">
                   <div className="text-center">
-                    <div className="text-yellow-500 mb-4">
-                      <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <div className="text-green-500 mb-6">
+                      <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <h3 className="text-xl font-bold text-black mb-2">Confirm Payment</h3>
-                    <p className="text-black mb-6">Are you sure you collected payment on the credit card machine?</p>
+                    <h3 className="text-3xl font-bold text-black mb-4">Confirm Payment</h3>
 
-                    <div className="flex gap-3">
+                    <div className="bg-blue-50 p-6 rounded-lg mb-6">
+                      <p className="text-3xl font-bold text-blue-800">
+                        ${getTotal('card').toFixed(2)}
+                      </p>
+                      <p className="text-lg text-blue-600 mt-2">Amount collected</p>
+                    </div>
+
+                    <p className="text-lg text-black mb-8">Are you sure you collected payment on the credit card machine?</p>
+
+                    <div className="flex gap-4">
                       <button
                         onClick={() => setShowCardConfirmation(false)}
-                        className="flex-1 bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 font-medium"
+                        className="flex-1 bg-gray-500 text-white py-4 px-6 rounded-lg hover:bg-gray-600 font-bold text-lg"
                       >
                         No, Cancel
                       </button>
@@ -4611,7 +4683,7 @@ export default function CheckoutPage() {
                           setShowCardConfirmation(false);
                           completeTransaction('card');
                         }}
-                        className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium"
+                        className="flex-1 bg-green-600 text-white py-4 px-6 rounded-lg hover:bg-green-700 font-bold text-lg"
                       >
                         Yes, Complete
                       </button>

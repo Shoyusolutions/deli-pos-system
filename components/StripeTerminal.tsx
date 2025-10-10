@@ -71,7 +71,7 @@ export default function StripeTerminal({
 
       terminalRef.current = terminal;
       setTerminal(terminal);
-      setStatus('Ready to connect reader');
+      setStatus('M2 reader registration in progress with Stripe support');
     } catch (error) {
       console.error('Terminal setup error:', error);
       setStatus('Setup failed');
@@ -194,10 +194,19 @@ export default function StripeTerminal({
       {!reader && !isConnecting && (
         <button
           onClick={discoverReaders}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+          disabled={true}
+          className="w-full bg-gray-400 text-white py-2 px-4 rounded cursor-not-allowed"
         >
-          Connect M2 Reader
+          Readers Not Available
         </button>
+      )}
+
+      {!reader && !isConnecting && (
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+          <p className="text-yellow-800">
+            <strong>M2 Reader Setup:</strong> Currently working with Stripe support to register readers purchased from eBay. This will be available once registration is complete.
+          </p>
+        </div>
       )}
 
       {reader && !isProcessing && (
