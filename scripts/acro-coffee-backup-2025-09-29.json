@@ -1,0 +1,150 @@
+{
+  "timestamp": "2025-09-29T16:31:50.108Z",
+  "count": 24,
+  "products": [
+    {
+      "name": "ACRO Signature",
+      "category": "ACRO SPECIALS",
+      "price": 6.5,
+      "inStock": true
+    },
+    {
+      "name": "ACRO Cold Brew",
+      "category": "ACRO SPECIALS",
+      "price": 5.5,
+      "inStock": true
+    },
+    {
+      "name": "ACRO Mocha",
+      "category": "ACRO SPECIALS",
+      "price": 7,
+      "inStock": true
+    },
+    {
+      "name": "Espresso",
+      "category": "ESPRESSO DRINKS",
+      "price": 3.5,
+      "inStock": true
+    },
+    {
+      "name": "Americano",
+      "category": "ESPRESSO DRINKS",
+      "price": 4.5,
+      "inStock": true
+    },
+    {
+      "name": "Latte",
+      "category": "ESPRESSO DRINKS",
+      "price": 5.5,
+      "inStock": true
+    },
+    {
+      "name": "Cappuccino",
+      "category": "ESPRESSO DRINKS",
+      "price": 5.25,
+      "inStock": true
+    },
+    {
+      "name": "Macchiato",
+      "category": "ESPRESSO DRINKS",
+      "price": 5.75,
+      "inStock": true
+    },
+    {
+      "name": "Flat White",
+      "category": "ESPRESSO DRINKS",
+      "price": 5.75,
+      "inStock": true
+    },
+    {
+      "name": "Cortado",
+      "category": "ESPRESSO DRINKS",
+      "price": 5.25,
+      "inStock": true
+    },
+    {
+      "name": "House Coffee",
+      "category": "COFFEE/TEA",
+      "price": 3.25,
+      "inStock": true
+    },
+    {
+      "name": "Iced Coffee",
+      "category": "COFFEE/TEA",
+      "price": 3.75,
+      "inStock": true
+    },
+    {
+      "name": "Black Tea",
+      "category": "COFFEE/TEA",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Green Tea",
+      "category": "COFFEE/TEA",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Chamomile Tea",
+      "category": "COFFEE/TEA",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Mountain Tea",
+      "category": "COFFEE/TEA",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Iced Tea",
+      "category": "COFFEE/TEA",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Evian Water",
+      "category": "BEVERAGES",
+      "price": 3,
+      "inStock": true
+    },
+    {
+      "name": "Fresh Orange Juice",
+      "category": "BEVERAGES",
+      "price": 4.5,
+      "inStock": true
+    },
+    {
+      "name": "Apple Juice",
+      "category": "BEVERAGES",
+      "price": 4,
+      "inStock": true
+    },
+    {
+      "name": "Sparkling Water",
+      "category": "BEVERAGES",
+      "price": 3.5,
+      "inStock": true
+    },
+    {
+      "name": "Hot Chocolate",
+      "category": "BEVERAGES",
+      "price": 5.5,
+      "inStock": true
+    },
+    {
+      "name": "Chai Latte",
+      "category": "BEVERAGES",
+      "price": 5.25,
+      "inStock": true
+    },
+    {
+      "name": "London Fog",
+      "category": "BEVERAGES",
+      "price": 5,
+      "inStock": true
+    }
+  ]
+}
