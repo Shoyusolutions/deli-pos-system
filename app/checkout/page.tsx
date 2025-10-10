@@ -2140,6 +2140,7 @@ export default function CheckoutPage() {
                   onChange={(e) => setNewProductName(e.target.value)}
                   placeholder="Enter product name"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                  inputMode="none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
@@ -2174,6 +2175,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setNewSupplierName(e.target.value)}
                       placeholder="Enter supplier name"
                       className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                      inputMode="none"
                     />
                     <button
                       type="button"
@@ -2325,6 +2327,7 @@ export default function CheckoutPage() {
                 onChange={(e) => setManualItemName(e.target.value)}
                 placeholder="Enter item name"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                inputMode="none"
               />
             </div>
 
@@ -2804,6 +2807,7 @@ export default function CheckoutPage() {
                     onChange={(e) => setManualItemName(e.target.value)}
                     placeholder="Enter item name"
                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                    inputMode="none"
                   />
                 </div>
                 <div className="mb-3">
