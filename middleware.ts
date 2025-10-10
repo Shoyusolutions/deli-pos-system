@@ -51,6 +51,10 @@ function checkRateLimit(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Security headers for all responses
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
+
   // Apply rate limiting to login endpoint
   if (pathname === '/api/auth/login') {
     if (!checkRateLimit(request, 'login', 5, 60000)) {
@@ -104,10 +108,6 @@ export async function middleware(request: NextRequest) {
 
   // Get the token from the request cookies
   const token = request.cookies.get('auth-token')?.value || '';
-
-  // Security headers for all responses
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-pathname', pathname);
 
   // If it's a public path, allow access
   if (isPublicPath) {
