@@ -20,6 +20,10 @@ export interface ITransaction extends Document {
   paymentMethod: 'cash' | 'card' | 'other';
   cashGiven?: number;
   changeGiven?: number;
+  stripePaymentIntentId?: string;
+  stripeChargeId?: string;
+  stripeFeeAmount?: number;
+  platformFeeAmount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +73,22 @@ const transactionSchema = new Schema<ITransaction>({
     required: false
   },
   changeGiven: {
+    type: Number,
+    required: false
+  },
+  stripePaymentIntentId: {
+    type: String,
+    required: false
+  },
+  stripeChargeId: {
+    type: String,
+    required: false
+  },
+  stripeFeeAmount: {
+    type: Number,
+    required: false
+  },
+  platformFeeAmount: {
     type: Number,
     required: false
   }

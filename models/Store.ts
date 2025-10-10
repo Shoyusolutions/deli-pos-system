@@ -11,6 +11,9 @@ export interface IStore extends Document {
   ownerId?: string;
   isActive: boolean;
   taxRate: number;
+  stripeConnectAccountId?: string;
+  stripeOnboardingCompleted?: boolean;
+  stripeTerminalLocationId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +60,18 @@ const storeSchema = new Schema<IStore>({
     default: 0.08,
     min: 0,
     max: 0.20
+  },
+  stripeConnectAccountId: {
+    type: String,
+    required: false
+  },
+  stripeOnboardingCompleted: {
+    type: Boolean,
+    default: false
+  },
+  stripeTerminalLocationId: {
+    type: String,
+    required: false
   }
 }, {
   timestamps: true

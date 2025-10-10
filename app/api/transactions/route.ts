@@ -24,7 +24,18 @@ export async function POST(req: NextRequest) {
     session.startTransaction();
 
     const body = await req.json();
-    const { storeId, items, tax, paymentMethod, cashGiven, userId } = body;
+    const {
+      storeId,
+      items,
+      tax,
+      paymentMethod,
+      cashGiven,
+      userId,
+      stripePaymentIntentId,
+      stripeChargeId,
+      stripeFeeAmount,
+      platformFeeAmount
+    } = body;
 
     if (!storeId || !items || !items.length) {
       await createAuditLog({
@@ -93,7 +104,11 @@ export async function POST(req: NextRequest) {
       total,
       paymentMethod,
       cashGiven: paymentMethod === 'cash' ? cashGiven : undefined,
-      changeGiven: paymentMethod === 'cash' ? changeGiven : undefined
+      changeGiven: paymentMethod === 'cash' ? changeGiven : undefined,
+      stripePaymentIntentId,
+      stripeChargeId,
+      stripeFeeAmount,
+      platformFeeAmount
     });
 
     await transaction.save({ session });

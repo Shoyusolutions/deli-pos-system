@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, DollarSign, Receipt, Shield, Database } from 'lucide-react';
+import { ArrowLeft, Save, DollarSign, Receipt, Shield, Database, CreditCard } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
+import StripeConnectOnboarding from '@/components/StripeConnectOnboarding';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -138,6 +139,19 @@ export default function SettingsPage() {
               </div>
             </button>
             <button
+              onClick={() => setActiveTab('payments')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'payments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-black hover:text-black'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payments
+              </div>
+            </button>
+            <button
               onClick={() => setActiveTab('receipt')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'receipt'
@@ -267,6 +281,13 @@ export default function SettingsPage() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold mb-4 text-black">Payment Settings</h2>
+              {storeId && <StripeConnectOnboarding storeId={storeId} />}
             </div>
           )}
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Keyboard, Package, X, Plus, ShoppingCart } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
+import StripeTerminal from '@/components/StripeTerminal';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 
 interface Product {
@@ -38,6 +39,8 @@ export default function CheckoutPage() {
   const lastKeyTimeRef = useRef<number>(0);
   const processedKeysRef = useRef<Set<string>>(new Set());
   const [showCardConfirmation, setShowCardConfirmation] = useState(false);
+  const [useStripeTerminal, setUseStripeTerminal] = useState(false);
+  const [processingTransaction, setProcessingTransaction] = useState(false);
 
   // Store settings
   const [storeSettings, setStoreSettings] = useState<any>(null);
@@ -107,7 +110,6 @@ export default function CheckoutPage() {
   const [similarProduct, setSimilarProduct] = useState<any>(null);
   const [showSimilarProductDialog, setShowSimilarProductDialog] = useState(false);
   const [showCashConfirmation, setShowCashConfirmation] = useState(false);
-  const [processingTransaction, setProcessingTransaction] = useState(false);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
   const cashInputRef = useRef<HTMLInputElement>(null);
@@ -1773,7 +1775,7 @@ export default function CheckoutPage() {
     return Math.round((given - total) * 100) / 100;
   };
 
-  const completeTransaction = async (method: 'cash' | 'card' = 'cash') => {
+  const completeTransaction = async (method: 'cash' | 'card' = 'cash', stripePaymentData?: any) => {
     try {
       setProcessingTransaction(true);
 
@@ -1795,18 +1797,28 @@ export default function CheckoutPage() {
         ? (getCashTotal() * storeSettings.cashDiscountRate / 100) + 0.30
         : 0;
 
+      const transactionData: any = {
+        storeId,
+        items: itemsWithPricing,
+        tax: getTax(),
+        total: transactionTotal,
+        processingFee,
+        paymentMethod: method,
+        cashGiven: method === 'cash' ? getCashDisplayAmount() : undefined
+      };
+
+      // Add Stripe payment data if using Stripe
+      if (stripePaymentData) {
+        transactionData.stripePaymentIntentId = stripePaymentData.id;
+        transactionData.stripeChargeId = stripePaymentData.charges?.data?.[0]?.id;
+        transactionData.stripeFeeAmount = stripePaymentData.charges?.data?.[0]?.application_fee_amount / 100;
+        transactionData.platformFeeAmount = stripePaymentData.application_fee_amount / 100;
+      }
+
       const response = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId,
-          items: itemsWithPricing,
-          tax: getTax(),
-          total: transactionTotal,
-          processingFee,
-          paymentMethod: method,
-          cashGiven: method === 'cash' ? getCashDisplayAmount() : undefined
-        })
+        body: JSON.stringify(transactionData)
       });
 
       if (response.ok) {
@@ -1866,6 +1878,16 @@ export default function CheckoutPage() {
       setShowCashNumpad(true);
     }
     setShowCashConfirmation(false);
+  };
+
+  const handleStripePaymentSuccess = (paymentIntent: any) => {
+    completeTransaction('card', paymentIntent);
+  };
+
+  const handleStripePaymentError = (error: string) => {
+    setMessage(`Payment error: ${error}`);
+    setTimeout(() => setMessage(''), 5000);
+    setPaymentMode('payment'); // Go back to payment selection
   };
 
   return (
@@ -4491,41 +4513,58 @@ export default function CheckoutPage() {
 
             {paymentMode === 'card' && (
               <div className="fixed inset-0 bg-gray-200 bg-opacity-80 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-auto">
-                  <div className="p-8 text-center">
-                    <h2 className="text-2xl font-bold mb-6 text-black">Credit Card Payment</h2>
-
-                    {/* Large total display */}
-                    <div className="bg-blue-50 p-6 rounded-xl mb-6">
-                      <p className="text-lg text-black mb-2">Enter this amount on credit card machine:</p>
-                      <p className="text-6xl font-bold text-blue-600">${getTotal('card').toFixed(2)}</p>
-                      {storeSettings?.cashDiscountEnabled && (
-                        <p className="text-sm text-black mt-2">Credit card price</p>
-                      )}
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-auto">
+                  <div className="p-8">
+                    <div className="text-center mb-6">
+                      <h2 className="text-2xl font-bold text-black">Credit Card Payment</h2>
+                      <div className="bg-blue-50 p-4 rounded-xl mt-4">
+                        <p className="text-lg text-black mb-2">Total Amount:</p>
+                        <p className="text-4xl font-bold text-blue-600">${getTotal('card').toFixed(2)}</p>
+                        {storeSettings?.cashDiscountEnabled && (
+                          <p className="text-sm text-black mt-2">Credit card price</p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Instructions */}
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                      <p className="text-black font-medium">Process payment on credit card terminal</p>
-                      <p className="text-sm text-black mt-1">Once payment is completed, click the button below</p>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Stripe Terminal Option */}
+                      <div className="border-2 border-blue-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-black mb-4">M2 Card Reader (Recommended)</h3>
+                        {storeId && (
+                          <StripeTerminal
+                            amount={getTotal('card')}
+                            storeId={storeId}
+                            onPaymentSuccess={handleStripePaymentSuccess}
+                            onPaymentError={handleStripePaymentError}
+                          />
+                        )}
+                      </div>
+
+                      {/* Manual Terminal Option */}
+                      <div className="border-2 border-gray-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-black mb-4">Manual Terminal</h3>
+                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                          <p className="text-black font-medium">Process payment on external terminal</p>
+                          <p className="text-sm text-black mt-1">Once payment is completed, click below</p>
+                        </div>
+                        <button
+                          onClick={() => setShowCardConfirmation(true)}
+                          className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium"
+                        >
+                          Payment Completed
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex gap-4">
+                    <div className="mt-6 text-center">
                       <button
                         onClick={() => setPaymentMode('payment')}
-                        className="flex-1 bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 font-medium flex items-center justify-center gap-2"
+                        className="bg-gray-500 text-white py-3 px-8 rounded-lg hover:bg-gray-600 font-medium flex items-center justify-center gap-2 mx-auto"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
-                        Back
-                      </button>
-                      <button
-                        onClick={() => setShowCardConfirmation(true)}
-                        className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-medium"
-                      >
-                        Payment Completed
+                        Back to Payment Options
                       </button>
                     </div>
                   </div>
