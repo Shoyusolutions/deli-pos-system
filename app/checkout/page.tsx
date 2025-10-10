@@ -852,8 +852,9 @@ export default function CheckoutPage() {
 
   // Global scanner capture
   useEffect(() => {
-    // Block scanner when not on main POS screen
-    if (paymentMode !== 'idle' || showManualEntry || showFoodSelection || showOptionModal || showModifierModal) return;
+    // Allow scanner on main POS screen, price check, inventory search, and add new item
+    // Block scanner only when on food selection, option modals, or payment screens
+    if (paymentMode !== 'idle' || showFoodSelection || showOptionModal || showModifierModal) return;
 
     const handleGlobalKeyPress = (e: KeyboardEvent) => {
       // Ignore keypresses when user is typing in form inputs
@@ -862,8 +863,9 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Check if we should block scanning (but allow in price check mode)
-      if (!priceCheckMode && (notFoundUpc || showManualKeyIn || showKeyIn || showAddProduct)) {
+      // Allow scanning in price check mode and when adding new items
+      // Only block when there's an unresolved product and NOT in price check mode
+      if (!priceCheckMode && notFoundUpc && !showAddProduct) {
         // If it looks like a scan attempt (numbers or Enter with buffer)
         if ((e.key >= '0' && e.key <= '9') || (e.key === 'Enter' && scanBuffer.length > 0)) {
           e.preventDefault();
@@ -919,7 +921,7 @@ export default function CheckoutPage() {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [paymentMode, showManualEntry, showFoodSelection, showOptionModal, showModifierModal, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message, priceCheckMode]);
+  }, [paymentMode, showFoodSelection, showOptionModal, showModifierModal, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message, priceCheckMode]);
 
   const handleScanComplete = async (upc: string) => {
     if (!upc || !storeId) return;
