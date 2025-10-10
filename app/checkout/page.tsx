@@ -3246,8 +3246,9 @@ export default function CheckoutPage() {
                               fullName = `${fullName} (${selectedIngredients.join(', ')})`;
                             }
 
-                            // Add modifiers if combo is selected
-                            const baseModifiers = optionModalComboSelected
+                            // Add modifiers if combo is selected (but not if already in selectedModifiers)
+                            const comboInSelectedModifiers = selectedModifiers['Combo (Drink & Side)'] > 0;
+                            const baseModifiers = (optionModalComboSelected && !comboInSelectedModifiers)
                               ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
                               : [];
 
@@ -3302,8 +3303,9 @@ export default function CheckoutPage() {
                             fullName = `${selectedBaseItem.name} (${option})`;
                           }
 
-                          // Add modifiers if combo is selected
-                          const baseModifiers = optionModalComboSelected
+                          // Add modifiers if combo is selected (but not if already in selectedModifiers)
+                          const comboInSelectedModifiers = selectedModifiers['Combo (Drink & Side)'] > 0;
+                          const baseModifiers = (optionModalComboSelected && !comboInSelectedModifiers)
                             ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
                             : [];
 
