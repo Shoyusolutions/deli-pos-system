@@ -873,10 +873,11 @@ export default function CheckoutPage() {
 
       // Only log important events to server (not individual key presses)
       const isImportant = message.includes('✅ Processing complete') ||
-                         message.includes('⏰ Scanner timeout') ||
+                         message.includes('⏰') ||
                          message.includes('📝 Scanner buffer updated') ||
                          message.includes('🚫 Blocking') ||
-                         message.includes('⚠️');
+                         message.includes('⚠️') ||
+                         message.includes('❌');
 
       if (isImportant) {
         logToServer(`DEBUG: ${debugMessage}`, data);
@@ -962,8 +963,9 @@ export default function CheckoutPage() {
 
         // Set timeout to complete scan automatically
         scanTimeoutRef.current = setTimeout(() => {
+          addDebugInfo(`⏰ Scanner timeout triggered, checking buffer...`);
           setScanBuffer(currentBuffer => {
-            addDebugInfo(`⏰ Scanner timeout triggered, buffer: "${currentBuffer}"`);
+            addDebugInfo(`⏰ Timeout buffer check: "${currentBuffer}" (length: ${currentBuffer.length})`);
             if (currentBuffer.length >= 8) {
               addDebugInfo(`✅ Processing complete barcode: "${currentBuffer}"`);
               handleScanComplete(currentBuffer);
@@ -971,6 +973,8 @@ export default function CheckoutPage() {
             } else if (currentBuffer.length > 0) {
               addDebugInfo(`⚠️ Incomplete barcode: "${currentBuffer}" (need 8+ digits)`);
               setMessage(`⚠️ Incomplete barcode: ${currentBuffer} (need 8+ digits)`);
+            } else {
+              addDebugInfo(`❌ Empty buffer at timeout`);
             }
             setIsScanning(false);
             return '';
