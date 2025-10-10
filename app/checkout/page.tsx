@@ -852,7 +852,8 @@ export default function CheckoutPage() {
 
   // Global scanner capture
   useEffect(() => {
-    if (paymentMode !== 'idle' || showManualEntry) return;
+    // Block scanner when not on main POS screen
+    if (paymentMode !== 'idle' || showManualEntry || showFoodSelection || showOptionModal || showModifierModal) return;
 
     const handleGlobalKeyPress = (e: KeyboardEvent) => {
       // Ignore keypresses when user is typing in form inputs
@@ -918,7 +919,7 @@ export default function CheckoutPage() {
         clearTimeout(scanTimeoutRef.current);
       }
     };
-  }, [paymentMode, showManualEntry, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message, priceCheckMode]);
+  }, [paymentMode, showManualEntry, showFoodSelection, showOptionModal, showModifierModal, scanBuffer, storeId, notFoundUpc, showManualKeyIn, showKeyIn, showAddProduct, message, priceCheckMode]);
 
   const handleScanComplete = async (upc: string) => {
     if (!upc || !storeId) return;
@@ -2514,18 +2515,8 @@ export default function CheckoutPage() {
             {/* Hide scanner section on mobile to save space */}
             {paymentMode === 'idle' && !showManualEntry && !notFoundUpc && (
               <div className="hidden sm:block bg-white rounded-xl shadow-sm p-2 sm:p-3 mb-3 flex-shrink-0">
-                {/* Compact Scanner Status */}
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priceCheckMode ? 'bg-orange-500 animate-pulse' : isScanning ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
-                    <span className="text-xs sm:text-sm text-black whitespace-nowrap">
-                      {priceCheckMode ? 'Price Check Mode' : isScanning ? 'Scanning...' : 'Scanner ready'}
-                    </span>
-                    {isScanning && scanBuffer && (
-                      <span className="text-xs font-mono text-black bg-yellow-100 px-2 py-1 rounded border">{scanBuffer}</span>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-center gap-6 px-2 py-1">
+                {/* Control Buttons */}
+                <div className="flex justify-center items-center gap-6 px-2 py-1">
                     <button
                       onClick={() => {
                         setPriceCheckMode(!priceCheckMode);
@@ -2578,9 +2569,7 @@ export default function CheckoutPage() {
                         <span>({foodCart.reduce((sum, item) => sum + item.quantity, 0)})</span>
                       )}
                     </button>
-                  </div>
                 </div>
-
               </div>
             )}
 
