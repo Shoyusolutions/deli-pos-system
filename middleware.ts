@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/auth-middleware';
+import { verifyQRToken } from './lib/qrAuth';
 
 // Public routes that don't require authentication
-const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db', '/mobile-onboard', '/api/qr-auth'];
+const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db', '/api/qr-auth'];
 
 // Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -72,6 +73,34 @@ export async function middleware(request: NextRequest) {
 
   // Check if it's a public path
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+
+  // Special handling for mobile-onboard route - validate QR tokens
+  if (pathname === '/mobile-onboard') {
+    const qrToken = request.nextUrl.searchParams.get('token');
+    const sessionToken = request.nextUrl.searchParams.get('session');
+
+    // If QR tokens are present, validate them
+    if (qrToken && sessionToken) {
+      const qrPayload = verifyQRToken(qrToken);
+      if (!qrPayload) {
+        // Invalid QR token - redirect to login with error
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('error', 'invalid_qr_token');
+        return NextResponse.redirect(loginUrl);
+      }
+      // QR token is valid - allow access
+      const response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+      response.headers.set('X-Frame-Options', 'DENY');
+      response.headers.set('X-Content-Type-Options', 'nosniff');
+      response.headers.set('X-XSS-Protection', '1; mode=block');
+      return response;
+    }
+    // No QR tokens - fall through to normal auth check
+  }
 
   // Get the token from the request cookies
   const token = request.cookies.get('auth-token')?.value || '';
