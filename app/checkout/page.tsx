@@ -1711,8 +1711,22 @@ export default function CheckoutPage() {
   };
 
   const getSubtotal = () => {
-    // Base subtotal (this is always the card price in cash discount model)
-    return cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    // Base subtotal from regular inventory items
+    const cartTotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+
+    // Add food items total (including modifiers)
+    const foodTotal = foodCart.reduce((sum, item) => {
+      const modifierTotal = item.modifiers?.reduce((modSum, mod) => modSum + mod.price, 0) || 0;
+      const itemPrice = item.price || 0;
+
+      if (item.isWeightBased) {
+        return sum + (itemPrice * (item.weight || 0)) + (modifierTotal * (item.quantity || 1));
+      } else {
+        return sum + (itemPrice * item.quantity) + (modifierTotal * item.quantity);
+      }
+    }, 0);
+
+    return cartTotal + foodTotal;
   };
 
   const getTax = () => {
@@ -4113,30 +4127,20 @@ export default function CheckoutPage() {
                   <div className="w-1/3 bg-white border-r border-gray-300 p-4 overflow-y-auto">
                     <h3 className="font-bold text-lg mb-4 text-black">Cart Summary</h3>
 
-                    {/* Existing Cart */}
-                    {cart.length > 0 && (
+                    {/* Unified Cart - All Items */}
+                    {(cart.length > 0 || foodCart.length > 0) && (
                       <div className="mb-4">
-                        <h4 className="font-semibold text-sm text-gray-600 mb-2">Current Cart:</h4>
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                        <h4 className="font-semibold text-sm text-gray-600 mb-2">Cart Items:</h4>
+                        <div className="max-h-48 overflow-y-auto">
+                          {/* Regular inventory items */}
                           {cart.map((item, index) => (
-                            <div key={index} className="flex justify-between text-sm">
+                            <div key={`cart-${index}`} className="flex justify-between text-sm p-2 border-b border-gray-200 last:border-b-0">
                               <span className="text-black truncate pr-2">{item.product.name} x{item.quantity}</span>
                               <span className="text-black font-medium">${(item.product.price * item.quantity).toFixed(2)}</span>
                             </div>
                           ))}
-                        </div>
-                        <div className="border-t mt-2 pt-2 flex justify-between font-bold text-sm text-black">
-                          <span>Subtotal:</span>
-                          <span>${cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* New Food Items */}
-                    {foodCart.length > 0 && (
-                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-2">
-                        <h4 className="font-semibold text-sm text-gray-600 mb-1">Adding to Cart:</h4>
-                        <div className="max-h-48 overflow-y-auto">
+                          {/* Food items with modifiers */}
                           {[...foodCart].reverse().map((item, index) => {
                             const modifierTotal = item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
                             const itemPrice = item.price || 0; // Handle undefined price
