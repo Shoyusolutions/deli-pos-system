@@ -4147,7 +4147,6 @@ export default function CheckoutPage() {
                             const basePrice = item.isWeightBased
                               ? (itemPrice * (item.weight || 0))
                               : (itemPrice * item.quantity);
-                            const totalPrice = basePrice + (modifierTotal * (item.quantity || 1));
                             // Alternating colors for better distinction
                             const bgColor = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
@@ -4254,7 +4253,7 @@ export default function CheckoutPage() {
                                         Edit Weight
                                       </button>
                                     )}
-                                    <span className="text-black font-bold text-sm">${totalPrice.toFixed(2)}</span>
+                                    <span className="text-black font-bold text-sm">${basePrice.toFixed(2)}</span>
                                   </div>
                                   {item.modifiers && item.modifiers.length > 0 && (
                                     <div className="pl-4 mt-1">
