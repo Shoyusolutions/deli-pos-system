@@ -863,12 +863,14 @@ export default function CheckoutPage() {
     }
     document.body.focus();
 
-    // Debug logging function with visual display
-    const addDebugInfo = (message: string) => {
+    // Debug logging function - send to server logs
+    const addDebugInfo = (message: string, data?: any) => {
       const timestamp = new Date().toLocaleTimeString();
       const debugMessage = `${timestamp}: ${message}`;
       console.log(debugMessage);
-      setDebugInfo(prev => [...prev.slice(-4), debugMessage]); // Keep last 5 messages
+
+      // Send to server immediately for easy copying
+      logToServer(`DEBUG: ${debugMessage}`, data);
     };
 
     // Server logging function
@@ -890,6 +892,7 @@ export default function CheckoutPage() {
     };
 
     const handleGlobalKeyPress = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
       const logData = {
         key: e.key,
         code: e.code,
@@ -899,11 +902,24 @@ export default function CheckoutPage() {
       };
 
       console.log('🔍 Key event:', e.key, 'Code:', e.code, 'Which:', e.which, 'Type:', e.type);
-      addDebugInfo(`🔍 Key: ${e.key} Code: ${e.code}`);
-      logToServer('🔍 Scanner Key Event', logData);
+      addDebugInfo(`🔍 Key: "${e.key}" Code: ${e.code} Target: ${target?.tagName || 'none'}`, {
+        ...logData,
+        targetTag: target?.tagName,
+        activeElement: document.activeElement?.tagName,
+        focusedElement: document.activeElement === target,
+        paymentMode,
+        priceCheckMode,
+        scanBuffer,
+        currentStates: {
+          showFoodSelection,
+          showOptionModal,
+          showModifierModal,
+          notFoundUpc: !!notFoundUpc,
+          showAddProduct
+        }
+      });
 
       // Only ignore keypresses when user is actively typing in visible form inputs
-      const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
         // Check if this is a visible input that user is actually using
         const isVisibleInput = target.offsetParent !== null && !target.hasAttribute('readonly');
@@ -1773,15 +1789,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col relative">
-      {/* Debug Info Display */}
-      {debugInfo.length > 0 && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-80 text-white p-2 rounded text-xs z-50 max-w-md">
-          <div className="font-bold mb-1">Scanner Debug:</div>
-          {debugInfo.map((info, index) => (
-            <div key={index} className="font-mono text-xs">{info}</div>
-          ))}
-        </div>
-      )}
       {/* Similar Product Found Dialog */}
       {showSimilarProductDialog && similarProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
