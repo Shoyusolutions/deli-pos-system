@@ -865,22 +865,12 @@ export default function CheckoutPage() {
     }
     document.body.focus();
 
-    // Debug logging function - send to server logs (only important events)
+    // Simple debug logging (minimal for production)
     const addDebugInfo = (message: string, data?: any) => {
-      const timestamp = new Date().toLocaleTimeString();
-      const debugMessage = `${timestamp}: ${message}`;
-      console.log(debugMessage);
-
-      // Only log important events to server (not individual key presses)
-      const isImportant = message.includes('✅ Processing') ||
-                         message.includes('↵ Enter') ||
-                         message.includes('📝 Scanner buffer updated') ||
-                         message.includes('🚫 Blocking') ||
-                         message.includes('⚠️') ||
-                         message.includes('❌');
-
-      if (isImportant) {
-        logToServer(`DEBUG: ${debugMessage}`, data);
+      console.log(`Scanner: ${message}`);
+      // Only log errors and completions for troubleshooting
+      if (message.includes('✅ Processing') || message.includes('⚠️') || message.includes('❌')) {
+        logToServer(`Scanner: ${message}`, data);
       }
     };
 
