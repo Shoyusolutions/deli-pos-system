@@ -892,9 +892,13 @@ export default function CheckoutPage() {
 
           // Set new timeout - scanner typically sends all digits quickly
           scanTimeoutRef.current = setTimeout(() => {
+            // Auto-submit if we have a complete barcode (8+ digits)
+            if (newBuffer.length >= 8) {
+              handleScanComplete(newBuffer);
+            }
             setScanBuffer('');
             setIsScanning(false);
-          }, 100);
+          }, 300);
 
           return newBuffer;
         });
@@ -2518,7 +2522,7 @@ export default function CheckoutPage() {
                       {priceCheckMode ? 'Price Check Mode' : isScanning ? 'Scanning...' : 'Scanner ready'}
                     </span>
                     {isScanning && scanBuffer && (
-                      <span className="text-xs font-mono text-black hidden sm:inline">{scanBuffer}</span>
+                      <span className="text-xs font-mono text-black bg-yellow-100 px-2 py-1 rounded border">{scanBuffer}</span>
                     )}
                   </div>
                   <div className="flex justify-between items-center gap-6 px-2 py-1">
