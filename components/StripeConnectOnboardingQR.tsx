@@ -1,21 +1,53 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ExternalLink, CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ExternalLink, CheckCircle, AlertCircle, CreditCard, QrCode, Smartphone, RefreshCw } from 'lucide-react';
+import QRCode from 'qrcode';
+import { pusherClient } from '@/lib/pusher';
 
-interface StripeConnectOnboardingProps {
+interface StripeConnectOnboardingQRProps {
   storeId: string;
 }
 
-export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboardingProps) {
+export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnboardingQRProps) {
   const [loading, setLoading] = useState(false);
   const [accountStatus, setAccountStatus] = useState<any>(null);
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     checkStripeAccount();
+    // Generate unique session ID for this onboarding session
+    setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   }, [storeId]);
+
+  useEffect(() => {
+    if (!sessionId || !pusherClient) return;
+
+    const channel = pusherClient.subscribe(`stripe-onboarding-${sessionId}`);
+
+    channel.bind('stripe-account_created', (data: any) => {
+      setConnectAccountId(data.accountId);
+      setMessage('✅ Account created on phone! Checking status...');
+      setTimeout(() => checkAccountStatus(data.accountId), 2000);
+    });
+
+    channel.bind('stripe-completed', (data: any) => {
+      setAccountStatus(data.status);
+      setMessage('🎉 Setup completed on phone!');
+      setShowQRCode(false);
+      setLoading(false);
+    });
+
+    return () => {
+      if (pusherClient) {
+        pusherClient.unsubscribe(`stripe-onboarding-${sessionId}`);
+      }
+    };
+  }, [sessionId]);
 
   const checkStripeAccount = async () => {
     try {
@@ -52,6 +84,33 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
     }
   };
 
+  const generateQRCode = async () => {
+    if (!sessionId) return;
+
+    setShowQRCode(true);
+    setLoading(true);
+    setMessage('📱 Scan this QR code with your phone to complete setup safely');
+
+    const baseUrl = window.location.origin;
+    const mobileUrl = `${baseUrl}/mobile-onboard?storeId=${storeId}&sessionId=${sessionId}`;
+
+    try {
+      if (qrCanvasRef.current) {
+        await QRCode.toCanvas(qrCanvasRef.current, mobileUrl, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#1F2937',
+            light: '#FFFFFF'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      setMessage('❌ Error generating QR code');
+    }
+  };
+
   const createStripeAccount = async () => {
     setLoading(true);
     setMessage('Creating Stripe Connect account...');
@@ -76,11 +135,11 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
           createOnboardingLink(accountId);
         }, 1000);
       } else {
-        setMessage('Failed to create account');
+        setMessage('❌ Failed to create account');
       }
     } catch (error) {
       console.error('Error creating account:', error);
-      setMessage('Error creating account');
+      setMessage('❌ Error creating account');
     } finally {
       setLoading(false);
     }
@@ -105,11 +164,11 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
         window.open(url, '_blank');
         setMessage('Complete your setup in the new window, then return here');
       } else {
-        setMessage('Failed to create onboarding link');
+        setMessage('❌ Failed to create onboarding link');
       }
     } catch (error) {
       console.error('Error creating onboarding link:', error);
-      setMessage('Error creating onboarding link');
+      setMessage('❌ Error creating onboarding link');
     } finally {
       setLoading(false);
     }
@@ -149,20 +208,93 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
             </div>
           </div>
 
-          <button
-            onClick={createStripeAccount}
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <>
-                <ExternalLink className="w-5 h-5" />
-                Set Up Stripe Connect
-              </>
-            )}
-          </button>
+          {!showQRCode ? (
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Smartphone className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-800">🔒 Recommended: Use Your Phone</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Complete setup on your phone for better security and compatibility.
+                      Perfect for ELO devices with limited browser capabilities.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={generateQRCode}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <QrCode className="w-5 h-5" />
+                    📱 Generate QR Code for Phone Setup
+                  </>
+                )}
+              </button>
+
+              <div className="text-center">
+                <span className="text-sm text-gray-500">or (not recommended for ELO devices)</span>
+              </div>
+
+              <button
+                onClick={createStripeAccount}
+                disabled={loading}
+                className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <ExternalLink className="w-5 h-5" />
+                    💻 Set Up on This Device
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center bg-gray-50 p-6 rounded-lg">
+                <canvas
+                  ref={qrCanvasRef}
+                  className="mx-auto border border-gray-200 rounded-lg bg-white"
+                />
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    📱 Scan with your phone camera
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {loading ? '⏳ Waiting for setup completion...' : '✅ QR Code Ready'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowQRCode(false);
+                    setLoading(false);
+                    setMessage('');
+                  }}
+                  className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={generateQRCode}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-1"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -180,7 +312,7 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
                   <AlertCircle className="w-5 h-5 text-yellow-600" />
                 )}
                 <span className="text-sm">
-                  Charges Enabled: {accountStatus.charges_enabled ? 'Yes' : 'No'}
+                  Charges Enabled: {accountStatus.charges_enabled ? '✅ Yes' : '❌ No'}
                 </span>
               </div>
 
@@ -191,7 +323,7 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
                   <AlertCircle className="w-5 h-5 text-yellow-600" />
                 )}
                 <span className="text-sm">
-                  Details Submitted: {accountStatus.details_submitted ? 'Yes' : 'No'}
+                  Details Submitted: {accountStatus.details_submitted ? '✅ Yes' : '❌ No'}
                 </span>
               </div>
 
@@ -202,7 +334,7 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
                   <AlertCircle className="w-5 h-5 text-yellow-600" />
                 )}
                 <span className="text-sm">
-                  Payouts Enabled: {accountStatus.payouts_enabled ? 'Yes' : 'No'}
+                  Payouts Enabled: {accountStatus.payouts_enabled ? '✅ Yes' : '❌ No'}
                 </span>
               </div>
 
@@ -210,7 +342,7 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-green-800">Ready to Accept Payments!</span>
+                    <span className="font-medium text-green-800">🎉 Ready to Accept Payments!</span>
                   </div>
                   <p className="text-sm text-green-700 mt-1">
                     Your M2 card reader can now process payments with a 5% platform fee.
@@ -232,6 +364,18 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
                       </>
                     )}
                   </button>
+
+                  <div className="text-center">
+                    <span className="text-sm text-gray-500">or</span>
+                  </div>
+
+                  <button
+                    onClick={generateQRCode}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    📱 Use Phone to Complete
+                  </button>
                 </div>
               )}
             </div>
@@ -244,8 +388,9 @@ export default function StripeConnectOnboarding({ storeId }: StripeConnectOnboar
 
           <button
             onClick={refreshStatus}
-            className="w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 font-medium"
+            className="w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 font-medium flex items-center justify-center gap-2"
           >
+            <RefreshCw className="w-4 h-4" />
             Refresh Status
           </button>
         </div>

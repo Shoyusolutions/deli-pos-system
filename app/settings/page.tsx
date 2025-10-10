@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, DollarSign, Receipt, Shield, Database, CreditCard } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 import OnScreenKeyboard from '@/components/OnScreenKeyboard';
-import StripeConnectOnboarding from '@/components/StripeConnectOnboarding';
+import StripeConnectOnboardingQR from '@/components/StripeConnectOnboardingQR';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -287,7 +287,7 @@ export default function SettingsPage() {
           {activeTab === 'payments' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold mb-4 text-black">Payment Settings</h2>
-              {storeId && <StripeConnectOnboarding storeId={storeId} />}
+              {storeId && <StripeConnectOnboardingQR storeId={storeId} />}
             </div>
           )}
 
