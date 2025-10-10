@@ -872,8 +872,8 @@ export default function CheckoutPage() {
       console.log(debugMessage);
 
       // Only log important events to server (not individual key presses)
-      const isImportant = message.includes('✅ Processing complete') ||
-                         message.includes('⏰') ||
+      const isImportant = message.includes('✅ Processing') ||
+                         message.includes('↵ Enter') ||
                          message.includes('📝 Scanner buffer updated') ||
                          message.includes('🚫 Blocking') ||
                          message.includes('⚠️') ||
@@ -960,27 +960,7 @@ export default function CheckoutPage() {
       setScanBuffer(prev => {
         const newBuffer = prev + e.key;
         addDebugInfo(`📝 Scanner buffer updated: "${newBuffer}" (length: ${newBuffer.length})`);
-
-        // Set timeout to complete scan automatically
-        scanTimeoutRef.current = setTimeout(() => {
-          addDebugInfo(`⏰ Scanner timeout triggered, checking buffer...`);
-          setScanBuffer(currentBuffer => {
-            addDebugInfo(`⏰ Timeout buffer check: "${currentBuffer}" (length: ${currentBuffer.length})`);
-            if (currentBuffer.length >= 8) {
-              addDebugInfo(`✅ Processing complete barcode: "${currentBuffer}"`);
-              handleScanComplete(currentBuffer);
-              setMessage(`🔍 Scanned: ${currentBuffer}`);
-            } else if (currentBuffer.length > 0) {
-              addDebugInfo(`⚠️ Incomplete barcode: "${currentBuffer}" (need 8+ digits)`);
-              setMessage(`⚠️ Incomplete barcode: ${currentBuffer} (need 8+ digits)`);
-            } else {
-              addDebugInfo(`❌ Empty buffer at timeout`);
-            }
-            setIsScanning(false);
-            return '';
-          });
-        }, 300);
-
+        setIsScanning(true);
         return newBuffer;
       });
     };
@@ -1116,12 +1096,22 @@ export default function CheckoutPage() {
       if (e.key >= '0' && e.key <= '9') {
         // Process the digit in keydown since scanner uses this event type
         handleScannerDigit(e);
-      } else if (e.key === 'Enter' && scanBuffer.length > 0) {
+      } else if (e.key === 'Enter') {
         e.preventDefault();
-        addDebugInfo(`↵ Enter from KeyDown with buffer: ${scanBuffer}`);
-        handleScanComplete(scanBuffer);
-        setScanBuffer('');
-        setIsScanning(false);
+        addDebugInfo(`↵ Enter pressed! Current buffer: "${scanBuffer}" (length: ${scanBuffer.length})`);
+
+        if (scanBuffer.length > 0) {
+          addDebugInfo(`✅ Processing barcode from Enter: "${scanBuffer}"`);
+          handleScanComplete(scanBuffer);
+          setMessage(`🔍 Scanned: ${scanBuffer}`);
+          setScanBuffer('');
+          setIsScanning(false);
+        } else {
+          addDebugInfo(`⚠️ Enter pressed but buffer is empty`);
+        }
+      } else {
+        // Log any other keys for debugging
+        addDebugInfo(`❓ Other key from scanner: "${e.key}" Code: ${e.code}`);
       }
     };
 
