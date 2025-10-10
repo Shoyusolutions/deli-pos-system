@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ExternalLink, CheckCircle, AlertCircle, CreditCard, QrCode, Smartphone, RefreshCw } from 'lucide-react';
+import { ExternalLink, CheckCircle, AlertCircle, CreditCard, QrCode, Smartphone, RefreshCw, Building } from 'lucide-react';
 import QRCode from 'qrcode';
 import { pusherClient } from '@/lib/pusher';
+import StripeBusinessForm from './StripeBusinessForm';
 
 interface StripeConnectOnboardingQRProps {
   storeId: string;
@@ -15,6 +16,7 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -198,6 +200,21 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
     }
   };
 
+  const handleBusinessFormSuccess = (accountId: string) => {
+    setConnectAccountId(accountId);
+    setShowBusinessForm(false);
+    setMessage('✅ Stripe Connect account created successfully!');
+    // Check the account status
+    setTimeout(() => {
+      checkAccountStatus(accountId);
+    }, 2000);
+  };
+
+  const handleBusinessFormCancel = () => {
+    setShowBusinessForm(false);
+    setMessage('');
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg border">
       <div className="flex items-center gap-3 mb-4">
@@ -226,16 +243,40 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
             </div>
           </div>
 
-          {!showQRCode ? (
+          {!showQRCode && !showBusinessForm ? (
             <div className="space-y-3">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Building className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-green-800">💻 Recommended: Direct Setup on This Device</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      Enter your business information directly on this device. Simple and secure - no external navigation required.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowBusinessForm(true)}
+                disabled={loading}
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              >
+                <Building className="w-5 h-5" />
+                💻 Set Up Business Information
+              </button>
+
+              <div className="text-center">
+                <span className="text-sm text-gray-500">or</span>
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Smartphone className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-blue-800">🔒 Recommended: Secure Phone Setup</h4>
+                    <h4 className="font-medium text-blue-800">📱 Alternative: Secure Phone Setup</h4>
                     <p className="text-sm text-blue-700 mt-1">
-                      Secure auto-login via encrypted QR code. Perfect for ELO devices with browser limitations.
-                      QR codes expire in 15 minutes for security.
+                      Use your phone if this device has browser limitations. QR codes expire in 15 minutes for security.
                     </p>
                   </div>
                 </div>
@@ -257,7 +298,7 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
               </button>
 
               <div className="text-center">
-                <span className="text-sm text-gray-500">or (not recommended for ELO devices)</span>
+                <span className="text-sm text-gray-500">or (advanced users only)</span>
               </div>
 
               <button
@@ -275,7 +316,7 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
                 )}
               </button>
             </div>
-          ) : (
+          ) : showQRCode ? (
             <div className="space-y-4">
               <div className="text-center bg-gray-50 p-6 rounded-lg">
                 <canvas
@@ -312,7 +353,13 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
                 </button>
               </div>
             </div>
-          )}
+          ) : showBusinessForm ? (
+            <StripeBusinessForm
+              storeId={storeId}
+              onSuccess={handleBusinessFormSuccess}
+              onCancel={handleBusinessFormCancel}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="space-y-4">

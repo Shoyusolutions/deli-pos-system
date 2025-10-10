@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createConnectAccount, createAccountLink, getAccountStatus } from '@/lib/stripe';
+import { createConnectAccount, createCompleteConnectAccount, createAccountLink, getAccountStatus } from '@/lib/stripe';
 import dbConnect from '@/lib/mongodb';
 import Store from '@/models/Store';
 
@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const { action, storeId, accountId } = await req.json();
+    const { action, storeId, accountId, businessInfo } = await req.json();
 
     switch (action) {
       case 'create_account': {
@@ -20,6 +20,21 @@ export async function POST(req: NextRequest) {
           store.email || 'owner@bedstuydeli.com',
           store.name
         );
+
+        await Store.findByIdAndUpdate(storeId, {
+          stripeConnectAccountId: account.id
+        });
+
+        return NextResponse.json({ accountId: account.id });
+      }
+
+      case 'create_complete_account': {
+        const store = await Store.findById(storeId);
+        if (!store) {
+          return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+        }
+
+        const account = await createCompleteConnectAccount(businessInfo);
 
         await Store.findByIdAndUpdate(storeId, {
           stripeConnectAccountId: account.id

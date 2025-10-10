@@ -83,6 +83,48 @@ export async function createConnectAccount(email: string, businessName: string) 
   });
 }
 
+export async function createCompleteConnectAccount(businessInfo: any) {
+  if (!stripe) {
+    throw new Error('Stripe not initialized. Please check your environment variables.');
+  }
+
+  const accountData: any = {
+    type: 'express',
+    email: businessInfo.email,
+    country: businessInfo.address.country,
+    business_type: businessInfo.businessType,
+    business_profile: {
+      name: businessInfo.businessName,
+    },
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+  };
+
+  // Add individual information for individual accounts
+  if (businessInfo.businessType === 'individual' && businessInfo.individual) {
+    accountData.individual = {
+      first_name: businessInfo.individual.first_name,
+      last_name: businessInfo.individual.last_name,
+      email: businessInfo.individual.email || businessInfo.email,
+      phone: businessInfo.individual.phone || businessInfo.phone,
+      address: businessInfo.address,
+    };
+  }
+
+  // Add company information for company accounts
+  if (businessInfo.businessType === 'company') {
+    accountData.company = {
+      name: businessInfo.businessName,
+      phone: businessInfo.phone,
+      address: businessInfo.address,
+    };
+  }
+
+  return await stripe.accounts.create(accountData);
+}
+
 export async function createAccountLink(accountId: string, returnUrl: string, refreshUrl: string) {
   if (!stripe) {
     throw new Error('Stripe not initialized. Please check your environment variables.');
