@@ -1647,22 +1647,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col relative">
-      {/* Scanner Status Bar - Always Visible on Mobile/Tablet */}
-      {paymentMode === 'idle' && (
-        <div className="sm:hidden fixed top-0 left-0 right-0 z-[100] bg-black bg-opacity-90 text-white px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${priceCheckMode ? 'bg-orange-500' : 'bg-green-500'} animate-pulse`} />
-            <span className="text-xs font-medium">
-              {priceCheckMode ? 'PRICE CHECK MODE' : 'SCANNER ACTIVE'}
-            </span>
-          </div>
-          {isScanning && scanBuffer && (
-            <span className="text-xs font-mono bg-white bg-opacity-20 px-2 py-1 rounded">{scanBuffer}</span>
-          )}
-          <span className="text-xs opacity-75">Honeywell N3600</span>
-        </div>
-      )}
-
       {/* Similar Product Found Dialog */}
       {showSimilarProductDialog && similarProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2529,9 +2513,9 @@ export default function CheckoutPage() {
                 {/* Compact Scanner Status */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priceCheckMode ? 'bg-orange-500 animate-pulse' : isScanning ? 'bg-yellow-500 animate-pulse' : 'bg-green-500 animate-pulse'}`} />
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${priceCheckMode ? 'bg-orange-500 animate-pulse' : isScanning ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
                     <span className="text-xs sm:text-sm text-black whitespace-nowrap">
-                      {priceCheckMode ? '🔍 Price Check - Scanner Active' : isScanning ? '📊 Scanning...' : '✅ Scanner Active - Ready'}
+                      {priceCheckMode ? 'Price Check Mode' : isScanning ? 'Scanning...' : 'Scanner ready'}
                     </span>
                     {isScanning && scanBuffer && (
                       <span className="text-xs font-mono text-black hidden sm:inline">{scanBuffer}</span>
