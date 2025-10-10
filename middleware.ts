@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/auth-middleware';
 
 // Public routes that don't require authentication
-const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db'];
+const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/check', '/api/test-db', '/mobile-onboard', '/api/qr-auth'];
 
 // Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
