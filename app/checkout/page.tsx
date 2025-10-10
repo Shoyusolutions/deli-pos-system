@@ -3255,10 +3255,22 @@ export default function CheckoutPage() {
                             const customModifiers: any[] = [];
                             Object.entries(selectedModifiers).forEach(([name, count]) => {
                               for (let j = 0; j < count; j++) {
-                                const modConfig = modifierConfigs[getModifierType(fullName) as keyof typeof modifierConfigs];
-                                const modifierDef = modConfig?.find(m => m.name === name);
-                                const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
-                                customModifiers.push({ name, price, quantity: 1 });
+                                // Handle combo modifier specially
+                                if (name === 'Combo (Drink & Side)') {
+                                  customModifiers.push({ name, price: comboUpcharge, quantity: 1 });
+                                }
+                                // Handle custom add-ons
+                                else if (name.startsWith('Custom Add-On - $')) {
+                                  const price = parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0');
+                                  customModifiers.push({ name, price, quantity: 1 });
+                                }
+                                // Handle regular modifiers
+                                else {
+                                  const modConfig = modifierConfigs[getModifierType(selectedBaseItem.name) as keyof typeof modifierConfigs];
+                                  const modifierDef = modConfig?.find(m => m.name === name);
+                                  const price = modifierDef?.price || 0;
+                                  customModifiers.push({ name, price, quantity: 1 });
+                                }
                               }
                             });
 
@@ -3299,10 +3311,22 @@ export default function CheckoutPage() {
                           const customModifiers: any[] = [];
                           Object.entries(selectedModifiers).forEach(([name, count]) => {
                             for (let j = 0; j < count; j++) {
-                              const modConfig = modifierConfigs[getModifierType(fullName) as keyof typeof modifierConfigs];
-                              const modifierDef = modConfig?.find(m => m.name === name);
-                              const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
-                              customModifiers.push({ name, price, quantity: 1 });
+                              // Handle combo modifier specially
+                              if (name === 'Combo (Drink & Side)') {
+                                customModifiers.push({ name, price: comboUpcharge, quantity: 1 });
+                              }
+                              // Handle custom add-ons
+                              else if (name.startsWith('Custom Add-On - $')) {
+                                const price = parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0');
+                                customModifiers.push({ name, price, quantity: 1 });
+                              }
+                              // Handle regular modifiers
+                              else {
+                                const modConfig = modifierConfigs[getModifierType(selectedBaseItem.name) as keyof typeof modifierConfigs];
+                                const modifierDef = modConfig?.find(m => m.name === name);
+                                const price = modifierDef?.price || 0;
+                                customModifiers.push({ name, price, quantity: 1 });
+                              }
                             }
                           });
 
@@ -3601,7 +3625,25 @@ export default function CheckoutPage() {
                   <div className="flex justify-between items-center mt-3 pt-3 border-t">
                     {/* Combo Button - Bottom Left */}
                     <button
-                      onClick={() => setOptionModalComboSelected(!optionModalComboSelected)}
+                      onClick={() => {
+                        const newComboState = !optionModalComboSelected;
+                        setOptionModalComboSelected(newComboState);
+                        setComboSelected(newComboState);
+
+                        // Also update selectedModifiers to keep them in sync
+                        if (newComboState) {
+                          setSelectedModifiers(prev => ({
+                            ...prev,
+                            'Combo (Drink & Side)': 1
+                          }));
+                        } else {
+                          setSelectedModifiers(prev => {
+                            const newModifiers = {...prev};
+                            delete newModifiers['Combo (Drink & Side)'];
+                            return newModifiers;
+                          });
+                        }
+                      }}
                       className={`px-5 py-3 rounded-lg font-medium text-lg transition-colors ${
                         optionModalComboSelected
                           ? 'bg-green-600 text-white hover:bg-green-700'
@@ -3751,44 +3793,52 @@ export default function CheckoutPage() {
                     </button>
                     <button
                       onClick={() => {
-                        // Apply modifiers to the cart item
-                        const updatedModifiers = Object.entries(selectedModifiers)
-                          .filter(([_, quantity]) => quantity > 0)
-                          .flatMap(([name, quantity]) => {
-                            // Check if this is a combo modifier
-                            if (name === 'Combo (Drink & Side)') {
-                              return Array(quantity).fill({name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1});
+                        // Check if we're editing an existing cart item or coming from option modal
+                        if (selectedCartItem && !(selectedCartItem as any).isCustomizing && foodCart.includes(selectedCartItem)) {
+                          // We're editing an existing cart item - apply modifiers to it
+                          const updatedModifiers = Object.entries(selectedModifiers)
+                            .filter(([_, quantity]) => quantity > 0)
+                            .flatMap(([name, quantity]) => {
+                              // Check if this is a combo modifier
+                              if (name === 'Combo (Drink & Side)') {
+                                return Array(quantity).fill({name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1});
+                              }
+
+                              // Check if this is a custom add-on
+                              if (name.startsWith('Custom Add-On - $')) {
+                                const priceMatch = name.match(/\$(\d+\.?\d*)/);
+                                const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+                                return Array(quantity).fill({name: 'Custom Add-On', price: price, quantity: 1});
+                              }
+
+                              const modifier = modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]
+                                ?.find(m => m.name === name);
+                              if (modifier) {
+                                // Create an array with one entry for each quantity
+                                return Array(quantity).fill({name: modifier.name, price: modifier.price, quantity: 1});
+                              }
+                              return [];
+                            });
+
+                          // Update the food cart with new modifiers
+                          setFoodCart(prev => prev.map((item, idx) => {
+                            if (item === selectedCartItem) {
+                              return {...item, modifiers: updatedModifiers};
                             }
+                            return item;
+                          }));
 
-                            // Check if this is a custom add-on
-                            if (name.startsWith('Custom Add-On - $')) {
-                              const priceMatch = name.match(/\$(\d+\.?\d*)/);
-                              const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
-                              return Array(quantity).fill({name: 'Custom Add-On', price: price, quantity: 1});
-                            }
-
-                            const modifier = modifierConfigs[getModifierType(selectedCartItem?.name || '') as keyof typeof modifierConfigs]
-                              ?.find(m => m.name === name);
-                            if (modifier) {
-                              // Create an array with one entry for each quantity
-                              return Array(quantity).fill({name: modifier.name, price: modifier.price, quantity: 1});
-                            }
-                            return [];
-                          });
-
-                        // Update the food cart with new modifiers
-                        setFoodCart(prev => prev.map((item, idx) => {
-                          if (item === selectedCartItem) {
-                            return {...item, modifiers: updatedModifiers};
-                          }
-                          return item;
-                        }));
-
-                        // Close modal
-                        setShowModifierModal(false);
-                        setSelectedCartItem(null);
-                        setSelectedModifiers({});
-                        setComboSelected(false);
+                          // Close modal and reset
+                          setShowModifierModal(false);
+                          setSelectedCartItem(null);
+                          setSelectedModifiers({});
+                          setComboSelected(false);
+                        } else {
+                          // We're coming from option modal - just close modifier modal
+                          // Let the option modal Apply button handle the final cart addition
+                          setShowModifierModal(false);
+                          // Don't reset selectedModifiers - let option modal use them
+                        }
                       }}
                       className="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 font-medium text-base"
                     >
@@ -3799,45 +3849,6 @@ export default function CheckoutPage() {
                     Customize {selectedCartItem?.name || ''}
                   </h3>
 
-                  {/* Combo Option Section - Simplified */}
-                  <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-                    <button
-                      onClick={() => {
-                        // Toggle combo selection
-                        setComboSelected(!comboSelected);
-
-                        // Add or remove combo modifier
-                        if (!comboSelected) {
-                          setSelectedModifiers(prev => ({
-                            ...prev,
-                            'Combo (Drink & Side)': 1
-                          }));
-                        } else {
-                          setSelectedModifiers(prev => {
-                            const newModifiers = {...prev};
-                            delete newModifiers['Combo (Drink & Side)'];
-                            return newModifiers;
-                          });
-                        }
-                      }}
-                      className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-colors ${
-                        comboSelected
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-orange-600 text-white hover:bg-orange-700'
-                      }`}
-                    >
-                      {comboSelected ? '✓ Combo Added' : 'Add Combo +$4.00'}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowCustomPriceKeypad(true);
-                      }}
-                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
-                    >
-                      OPEN KEY
-                    </button>
-                  </div>
 
                   <p className="text-xs text-gray-600 mb-2 text-center flex-shrink-0">
                     Select Add-Ons
@@ -3926,99 +3937,48 @@ export default function CheckoutPage() {
                       })}
                   </div>
 
-                  {/* Apply button for customizing items */}
-                  {selectedCartItem && showModifierModal && (
-                    <div className="flex gap-2 p-3 border-t bg-gray-50">
-                      <button
-                        onClick={() => {
-                          // Apply customizations and add to cart
-                          const item: any = selectedCartItem;
-                          if (item) {
-                            if (item.baseSelection) {
-                              // Handle items from option modal (with baseSelection)
-                              const baseSelection = item.baseSelection;
+                  {/* Combo Option Section - Bottom Left */}
+                  <div className="flex items-center gap-3 mt-3 flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        // Toggle combo selection
+                        const newComboState = !comboSelected;
+                        setComboSelected(newComboState);
+                        setOptionModalComboSelected(newComboState);
 
-                              // Build the final items with modifiers
-                              const newItems = [];
-                              for (let i = 0; i < baseSelection.quantity; i++) {
-                                // Build modifiers array from selectedModifiers
-                                const modifiers: any[] = [];
-                                Object.entries(selectedModifiers).forEach(([name, count]) => {
-                                  for (let j = 0; j < count; j++) {
-                                    const modConfig = modifierConfigs[getModifierType(item.name) as keyof typeof modifierConfigs];
-                                    const modifierDef = modConfig?.find(m => m.name === name);
-                                    const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
-                                    modifiers.push({ name, price, quantity: 1 });
-                                  }
-                                });
+                        // Add or remove combo modifier
+                        if (newComboState) {
+                          setSelectedModifiers(prev => ({
+                            ...prev,
+                            'Combo (Drink & Side)': 1
+                          }));
+                        } else {
+                          setSelectedModifiers(prev => {
+                            const newModifiers = {...prev};
+                            delete newModifiers['Combo (Drink & Side)'];
+                            return newModifiers;
+                          });
+                        }
+                      }}
+                      className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-colors ${
+                        comboSelected
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-orange-600 text-white hover:bg-orange-700'
+                      }`}
+                    >
+                      {comboSelected ? '✓ Combo Added' : 'Add Combo +$4.00'}
+                    </button>
 
-                                const newItem = {
-                                  name: item.name,
-                                  price: item.price,
-                                  quantity: 1,
-                                  modifiers: modifiers
-                                };
-                                newItems.push(newItem);
-                              }
+                    <button
+                      onClick={() => {
+                        setShowCustomPriceKeypad(true);
+                      }}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+                    >
+                      OPEN KEY
+                    </button>
+                  </div>
 
-                              // Add all items to cart
-                              setFoodCart([...foodCart, ...newItems]);
-                            } else {
-                              // Handle existing cart items being customized
-                              // Build modifiers array from selectedModifiers
-                              const modifiers: any[] = [];
-                              Object.entries(selectedModifiers).forEach(([name, count]) => {
-                                for (let j = 0; j < count; j++) {
-                                  const modConfig = modifierConfigs[getModifierType(item.name) as keyof typeof modifierConfigs];
-                                  const modifierDef = modConfig?.find(m => m.name === name);
-                                  const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
-                                  modifiers.push({ name, price, quantity: 1 });
-                                }
-                              });
-
-                              // Update the existing cart item with new modifiers
-                              const updatedItem = {
-                                ...item,
-                                modifiers: modifiers
-                              };
-
-                              // Replace the existing item in cart
-                              const updatedCart = foodCart.map(cartItem =>
-                                cartItem === item ? updatedItem : cartItem
-                              );
-                              setFoodCart(updatedCart);
-                            }
-
-                            // Close both modals
-                            setShowModifierModal(false);
-                            setShowOptionModal(false);
-                            setSelectedBaseItem(null);
-                            setSelectedOptions({});
-                            setMultiSelectOptions({});
-                            setSelectedCartItem(null);
-                            setSelectedModifiers({});
-                            setComboSelected(false);
-                            setOptionModalQuantity(1);
-                            setOptionModalComboSelected(false);
-                          }
-                        }}
-                        className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-semibold text-lg transition-colors"
-                      >
-                        Apply & Add to Cart
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowModifierModal(false);
-                          setSelectedCartItem(null);
-                          setSelectedModifiers({});
-                          setComboSelected(false);
-                        }}
-                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -4574,13 +4534,6 @@ export default function CheckoutPage() {
                   <div className="p-8">
                     <div className="text-center mb-6">
                       <h2 className="text-2xl font-bold text-black">Credit Card Payment</h2>
-                      <div className="bg-blue-50 p-4 rounded-xl mt-4">
-                        <p className="text-lg text-black mb-2">Total Amount:</p>
-                        <p className="text-4xl font-bold text-blue-600">${getTotal('card').toFixed(2)}</p>
-                        {storeSettings?.cashDiscountEnabled && (
-                          <p className="text-sm text-black mt-2">Credit card price</p>
-                        )}
-                      </div>
                     </div>
 
                     <div className="grid md:grid-cols-1 gap-6">
@@ -4591,7 +4544,7 @@ export default function CheckoutPage() {
                           {storeId && (
                             <MobilePayment
                               amount={getTotal('card')}
-                              storeId={storeId}
+                              storeId={storeId as string}
                               onPaymentSuccess={handleStripePaymentSuccess}
                               onPaymentError={handleStripePaymentError}
                             />
@@ -4606,7 +4559,7 @@ export default function CheckoutPage() {
                           {storeId && (
                             <StripeTerminal
                               amount={getTotal('card')}
-                              storeId={storeId}
+                              storeId={storeId as string}
                               onPaymentSuccess={handleStripePaymentSuccess}
                               onPaymentError={handleStripePaymentError}
                             />
