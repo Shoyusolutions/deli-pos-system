@@ -16,7 +16,6 @@ export const STRIPE_CONFIG = {
   publishableKey: process.env.STRIPE_PUBLISHABLE_KEY!,
   connectClientId: process.env.STRIPE_CONNECT_CLIENT_ID!,
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
-  terminalSecret: process.env.STRIPE_TERMINAL_SECRET!,
   applicationFeePercent: 5, // 5% platform fee
 };
 
