@@ -856,20 +856,59 @@ export default function CheckoutPage() {
     // Block scanner only when on food selection, option modals, or payment screens
     if (paymentMode !== 'idle' || showFoodSelection || showOptionModal || showModifierModal) return;
 
-    const handleGlobalKeyPress = (e: KeyboardEvent) => {
-      console.log('🔍 Key event:', e.key, 'Code:', e.code, 'Which:', e.which, 'Type:', e.type);
+    // Ensure document can receive keyboard events
+    if (document.body.tabIndex === -1) {
+      document.body.tabIndex = 0;
+    }
+    document.body.focus();
 
-      // Ignore keypresses when user is typing in form inputs
+    // Server logging function
+    const logToServer = async (message: string, data?: any) => {
+      try {
+        await fetch('/api/debug-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            data,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+          })
+        });
+      } catch (err) {
+        console.log('Failed to log to server:', err);
+      }
+    };
+
+    const handleGlobalKeyPress = (e: KeyboardEvent) => {
+      const logData = {
+        key: e.key,
+        code: e.code,
+        which: e.which,
+        type: e.type,
+        timestamp: Date.now()
+      };
+
+      console.log('🔍 Key event:', e.key, 'Code:', e.code, 'Which:', e.which, 'Type:', e.type);
+      logToServer('🔍 Scanner Key Event', logData);
+
+      // Only ignore keypresses when user is actively typing in visible form inputs
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
-        console.log('🚫 Ignoring - user in input field');
-        return;
+        // Check if this is a visible input that user is actually using
+        const isVisibleInput = target.offsetParent !== null && !target.hasAttribute('readonly');
+        if (isVisibleInput && document.activeElement === target) {
+          console.log('🚫 Ignoring - user actively typing in input field');
+          logToServer('🚫 Ignoring key - user actively typing', { target: target.tagName });
+          return;
+        }
       }
 
       // Allow scanning in price check mode and when adding new items
       // Only block when there's an unresolved product and NOT in price check mode
       if (!priceCheckMode && notFoundUpc && !showAddProduct) {
         console.log('🚫 Blocking scan - unresolved item exists');
+        logToServer('🚫 Blocking scan - unresolved item exists', { priceCheckMode, notFoundUpc, showAddProduct });
         // If it looks like a scan attempt (numbers or Enter with buffer)
         if ((e.key >= '0' && e.key <= '9') || (e.key === 'Enter' && scanBuffer.length > 0)) {
           e.preventDefault();
@@ -889,10 +928,12 @@ export default function CheckoutPage() {
       // Build up the scan buffer for numbers
       if (e.key >= '0' && e.key <= '9') {
         console.log('✅ Processing digit:', e.key);
+        logToServer('✅ Processing digit', { key: e.key, currentBuffer: scanBuffer });
         e.preventDefault();
         setScanBuffer(prev => {
           const newBuffer = prev + e.key;
           console.log('📝 Buffer updated:', newBuffer);
+          logToServer('📝 Buffer updated', { newBuffer, bufferLength: newBuffer.length });
           setIsScanning(true);
 
           // Clear previous timeout
@@ -905,12 +946,15 @@ export default function CheckoutPage() {
             // Auto-submit if we have a complete barcode (8+ digits)
             setScanBuffer(currentBuffer => {
               console.log('⏰ Timeout triggered, buffer:', currentBuffer);
+              logToServer('⏰ Timeout triggered', { buffer: currentBuffer, length: currentBuffer.length });
               if (currentBuffer.length >= 8) {
                 console.log('✅ Processing complete barcode:', currentBuffer);
+                logToServer('✅ Processing complete barcode', { barcode: currentBuffer });
                 handleScanComplete(currentBuffer);
                 setMessage(`🔍 Scanned: ${currentBuffer}`);
               } else if (currentBuffer.length > 0) {
                 console.log('⚠️ Incomplete barcode:', currentBuffer);
+                logToServer('⚠️ Incomplete barcode', { barcode: currentBuffer });
                 setMessage(`⚠️ Incomplete barcode: ${currentBuffer} (need 8+ digits)`);
               }
               setIsScanning(false);
@@ -922,6 +966,7 @@ export default function CheckoutPage() {
         });
       } else if (e.key === 'Enter' && scanBuffer.length > 0) {
         console.log('↵ Enter pressed with buffer:', scanBuffer);
+        logToServer('↵ Enter pressed', { buffer: scanBuffer });
         // Scanner pressed enter after UPC
         e.preventDefault();
         handleScanComplete(scanBuffer);
@@ -929,12 +974,22 @@ export default function CheckoutPage() {
         setIsScanning(false);
       } else {
         console.log('❓ Unhandled key:', e.key);
+        logToServer('❓ Unhandled key', logData);
       }
     };
 
     // Listen to multiple event types to catch scanner input
     const handleKeyDown = (e: KeyboardEvent) => {
+      const keyDownData = {
+        key: e.key,
+        code: e.code,
+        which: e.which,
+        type: 'keydown',
+        timestamp: Date.now()
+      };
       console.log('🔍 KeyDown event:', e.key, 'Code:', e.code, 'Which:', e.which);
+      logToServer('🔍 KeyDown Event', keyDownData);
+
       // Some scanners use keydown instead of keypress
       if (e.key >= '0' && e.key <= '9') {
         handleGlobalKeyPress(e);
@@ -943,16 +998,32 @@ export default function CheckoutPage() {
 
     const handleInput = (e: Event) => {
       console.log('🔍 Input event:', e);
+      logToServer('🔍 Input Event', {
+        type: e.type,
+        target: (e.target as HTMLElement)?.tagName,
+        timestamp: Date.now()
+      });
+    };
+
+    // Click handler to ensure focus returns to body for scanner input
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Only refocus if not clicking on an input element
+      if (target && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.contentEditable) {
+        setTimeout(() => document.body.focus(), 0);
+      }
     };
 
     document.addEventListener('keypress', handleGlobalKeyPress);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('input', handleInput);
+    document.addEventListener('click', handleDocumentClick);
 
     return () => {
       document.removeEventListener('keypress', handleGlobalKeyPress);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('input', handleInput);
+      document.removeEventListener('click', handleDocumentClick);
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
       }
