@@ -35,6 +35,8 @@ export default function CheckoutPage() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [screenFlash, setScreenFlash] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const lastKeyTimeRef = useRef<number>(0);
+  const processedKeysRef = useRef<Set<string>>(new Set());
   const [showCardConfirmation, setShowCardConfirmation] = useState(false);
 
   // Store settings
@@ -863,14 +865,22 @@ export default function CheckoutPage() {
     }
     document.body.focus();
 
-    // Debug logging function - send to server logs
+    // Debug logging function - send to server logs (only important events)
     const addDebugInfo = (message: string, data?: any) => {
       const timestamp = new Date().toLocaleTimeString();
       const debugMessage = `${timestamp}: ${message}`;
       console.log(debugMessage);
 
-      // Send to server immediately for easy copying
-      logToServer(`DEBUG: ${debugMessage}`, data);
+      // Only log important events to server (not individual key presses)
+      const isImportant = message.includes('✅ Processing complete') ||
+                         message.includes('⏰ Scanner timeout') ||
+                         message.includes('📝 Scanner buffer updated') ||
+                         message.includes('🚫 Blocking') ||
+                         message.includes('⚠️');
+
+      if (isImportant) {
+        logToServer(`DEBUG: ${debugMessage}`, data);
+      }
     };
 
     // Server logging function
@@ -893,6 +903,25 @@ export default function CheckoutPage() {
 
     // Handle scanner digit input with debouncing
     const handleScannerDigit = (e: KeyboardEvent) => {
+      const now = Date.now();
+      const keyId = `${e.key}-${e.code}-${now}`;
+
+      // Debounce rapid duplicate events (scanner sends multiple events per key)
+      if (now - lastKeyTimeRef.current < 50) { // 50ms debounce
+        return;
+      }
+
+      // Prevent processing the same key multiple times in rapid succession
+      const keySignature = `${e.key}-${scanBuffer.length}`;
+      if (processedKeysRef.current.has(keySignature)) {
+        return;
+      }
+
+      processedKeysRef.current.add(keySignature);
+      setTimeout(() => processedKeysRef.current.delete(keySignature), 100);
+
+      lastKeyTimeRef.current = now;
+
       const target = e.target as HTMLElement;
 
       // Only ignore if user is actively typing in a focused input
