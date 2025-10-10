@@ -135,6 +135,9 @@ export default function CheckoutPage() {
   const [multiSelectOptions, setMultiSelectOptions] = useState<{[key: string]: number}>({});
 
   // Combo selection states
+  const [comboSelected, setComboSelected] = useState(false);
+  const [optionModalQuantity, setOptionModalQuantity] = useState(1);
+  const [optionModalComboSelected, setOptionModalComboSelected] = useState(false);
 
   // States for modifiers/add-ons
   const [showModifierModal, setShowModifierModal] = useState(false);
@@ -1120,6 +1123,8 @@ export default function CheckoutPage() {
       const defaultPrice = item.price || (item.prices ? Object.values(item.prices)[0] : 0);
       setSelectedBaseItem({...item, price: defaultPrice});
       setSelectedOptions({});
+      setOptionModalQuantity(1); // Reset quantity to 1
+      setOptionModalComboSelected(false); // Reset combo selection
       setShowOptionModal(true);
     } else {
       // Direct add for items without options
@@ -2961,22 +2966,139 @@ export default function CheckoutPage() {
                    }}>
                 <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-[95vw] h-[90vh] w-full mx-2 flex flex-col"
                      onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => {
-                      setShowOptionModal(false);
-                      setSelectedBaseItem(null);
-                      setSelectedOptions({});
-                      setMultiSelectOptions({});
-                      setSelectedCartItem(null);
-                    }}
-                    className="text-gray-600 hover:text-gray-800 font-medium mb-2 self-start"
-                  >
-                    ← Back
-                  </button>
-                  <h3 className="text-xl font-bold text-black mb-1 text-center">
-                    {selectedBaseItem.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3 text-center">
+                  {/* Top Header with Back, Item Name, and Apply */}
+                  <div className="flex justify-between items-center mb-3">
+                    <button
+                      onClick={() => {
+                        setShowOptionModal(false);
+                        setSelectedBaseItem(null);
+                        setSelectedOptions({});
+                        setMultiSelectOptions({});
+                        setSelectedCartItem(null);
+                        setOptionModalQuantity(1);
+                        setOptionModalComboSelected(false);
+                      }}
+                      className="text-gray-600 hover:text-gray-800 font-medium text-lg"
+                    >
+                      ← Back
+                    </button>
+
+                    {/* Item Name in Center */}
+                    <h3 className="text-2xl font-bold text-black flex-1 text-center">
+                      {selectedBaseItem.name}
+                    </h3>
+
+                    <button
+                      onClick={() => {
+                        // Handle Apply - add item with selected options
+                        const config = optionConfigs[selectedBaseItem.optionType];
+
+                        if (config?.multiSelect) {
+                          // Multi-select handling (for ingredients)
+                          const selectedIngredients = Object.keys(multiSelectOptions).filter(key => multiSelectOptions[key] > 0);
+                          if (selectedIngredients.length > 0) {
+                            let fullName = selectedBaseItem.name;
+                            let finalPrice = selectedBaseItem.basePrice || selectedBaseItem.price || 0;
+
+                            // Calculate extra charges for multi-select
+                            const totalSelections = Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0);
+                            const extraSelections = Math.max(0, totalSelections - (config.maxFree || 0));
+                            const extraCharge = extraSelections * (config.extraCharge || 0);
+                            finalPrice += extraCharge;
+
+                            if (selectedBaseItem.selectedSize) {
+                              fullName = `${fullName} (${selectedBaseItem.selectedSize}, ${selectedIngredients.join(', ')})`;
+                            } else {
+                              fullName = `${fullName} (${selectedIngredients.join(', ')})`;
+                            }
+
+                            // Add modifiers if combo is selected
+                            const modifiers = optionModalComboSelected
+                              ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
+                              : [];
+
+                            // Add item with quantity
+                            for (let i = 0; i < optionModalQuantity; i++) {
+                              const newItem = {
+                                name: fullName,
+                                price: finalPrice,
+                                quantity: 1,
+                                modifiers: [...modifiers]
+                              };
+                              setFoodCart([...foodCart, newItem]);
+                            }
+                          }
+                        } else if (selectedOptions[selectedBaseItem.optionType]) {
+                          // Single select handling
+                          const option = selectedOptions[selectedBaseItem.optionType];
+                          let fullName = selectedBaseItem.name;
+                          let finalPrice = selectedBaseItem.price;
+
+                          if (selectedBaseItem.prices) {
+                            finalPrice = selectedBaseItem.prices[option.toLowerCase()] || selectedBaseItem.prices[option] || selectedBaseItem.price;
+                          }
+
+                          // Format name based on option type
+                          if (option) {
+                            fullName = `${selectedBaseItem.name} (${option})`;
+                          }
+
+                          // Add modifiers if combo is selected
+                          const modifiers = optionModalComboSelected
+                            ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
+                            : [];
+
+                          // Add item with quantity
+                          for (let i = 0; i < optionModalQuantity; i++) {
+                            const newItem = {
+                              name: fullName,
+                              price: finalPrice,
+                              quantity: 1,
+                              modifiers: [...modifiers]
+                            };
+                            setFoodCart([...foodCart, newItem]);
+                          }
+                        }
+
+                        // Close modal and reset
+                        setShowOptionModal(false);
+                        setSelectedBaseItem(null);
+                        setSelectedOptions({});
+                        setMultiSelectOptions({});
+                        setSelectedCartItem(null);
+                        setOptionModalQuantity(1);
+                        setOptionModalComboSelected(false);
+                      }}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
+                    >
+                      Apply →
+                    </button>
+                  </div>
+
+                  {/* Quantity Controls */}
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    {/* Minus Button */}
+                    <button
+                      onClick={() => setOptionModalQuantity(Math.max(1, optionModalQuantity - 1))}
+                      className="w-16 h-16 rounded-full bg-white border-4 border-gray-400 text-black hover:bg-gray-100 hover:border-gray-600 flex items-center justify-center text-3xl font-bold transition-all"
+                    >
+                      −
+                    </button>
+
+                    {/* Quantity Display */}
+                    <span className="w-20 text-center font-bold text-4xl text-black">{optionModalQuantity}</span>
+
+                    {/* Plus Button */}
+                    <button
+                      onClick={() => setOptionModalQuantity(optionModalQuantity + 1)}
+                      className="w-16 h-16 rounded-full bg-white border-4 border-gray-400 text-black hover:bg-gray-100 hover:border-gray-600 flex items-center justify-center text-3xl font-bold transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Option Selection Title */}
+                  <p className="text-sm text-gray-600 mb-2 text-center">
                     {optionConfigs[selectedBaseItem.optionType]?.title}
                     {optionConfigs[selectedBaseItem.optionType]?.multiSelect && (
                       <span className="block text-xs mt-1">
@@ -3024,14 +3146,18 @@ export default function CheckoutPage() {
                       const config = optionConfigs[selectedBaseItem.optionType];
                       const isMultiSelect = config?.multiSelect;
                       const quantity = multiSelectOptions[option] || 0;
-                      const isSelected = quantity > 0;
+                      const isSelected = isMultiSelect
+                        ? quantity > 0
+                        : selectedOptions[selectedBaseItem.optionType] === option;
 
                       return (
                         <div
                           key={option}
-                          className={`${buttonHeight} relative flex flex-col items-center justify-center p-1.5 bg-white border-2 ${
-                            isSelected ? 'border-blue-500' : 'border-gray-300'
-                          } rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all`}
+                          className={`${buttonHeight} relative flex flex-col items-center justify-center p-1.5 border-2 ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-300 bg-white hover:border-blue-500 hover:bg-blue-50'
+                          } rounded-lg transition-all`}
                         >
                           <button
                             onClick={() => {
@@ -3041,16 +3167,19 @@ export default function CheckoutPage() {
                                 newOptions[option] = (newOptions[option] || 0) + 1;
                                 setMultiSelectOptions(newOptions);
                               } else {
-                              // Single select - immediately add to cart
-                              setSelectedOptions({...selectedOptions, [selectedBaseItem.optionType]: option});
+                              // Single select - toggle selection (deselect if already selected)
+                              if (selectedOptions[selectedBaseItem.optionType] === option) {
+                                // Deselect if clicking the same option
+                                const newOptions = {...selectedOptions};
+                                delete newOptions[selectedBaseItem.optionType];
+                                setSelectedOptions(newOptions);
+                              } else {
+                                // Select the new option
+                                setSelectedOptions({...selectedOptions, [selectedBaseItem.optionType]: option});
+                              }
 
-                              // Construct the full item name with options
-                              let fullName = selectedBaseItem.name;
-                              let finalPrice = price || 0;
-
-                              if (selectedBaseItem.optionType === 'roll-hero') {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType === 'juice-size-custom') {
+                              // Special handling for Create Your Own Juice size selection
+                              if (selectedBaseItem.optionType === 'juice-size-custom') {
                                 // For Create Your Own Juice, save the size and show ingredients selection
                                 const juicePrice = selectedBaseItem.prices[option.toLowerCase()];
                                 const ingredientOptionType = option.toLowerCase() === 'small' ? 'juice-custom-small' : 'juice-custom-large';
@@ -3066,45 +3195,8 @@ export default function CheckoutPage() {
                                 });
                                 setMultiSelectOptions({});
                                 return; // Don't close modal, continue to ingredients selection
-                              } else if (selectedBaseItem.optionType.includes('size')) {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType.includes('breakfast-bread')) {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType === 'bagel-type') {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType.includes('sauce') || selectedBaseItem.optionType.includes('dressing')) {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType === 'juice-size') {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType === 'coffee-size') {
-                                fullName = `${selectedBaseItem.name} (${option})`;
-                              } else if (selectedBaseItem.optionType === 'cappuccino-flavor-size') {
-                                // Format: "Cappuccino (French Vanilla, Small)"
-                                const parts = option.split(' ');
-                                const size = parts.pop();
-                                const flavor = parts.join(' ');
-                                fullName = `${selectedBaseItem.name} (${flavor}, ${size})`;
-                              } else {
-                                fullName = `${selectedBaseItem.name} (${option})`;
                               }
-
-                              // Add to food cart
-                              const existingItem = foodCart.find(cartItem => cartItem.name === fullName);
-                              if (existingItem) {
-                                setFoodCart(foodCart.map(cartItem =>
-                                  cartItem.name === fullName
-                                    ? {...cartItem, quantity: cartItem.quantity + 1}
-                                    : cartItem
-                                ));
-                              } else {
-                                setFoodCart([...foodCart, {name: fullName, price: finalPrice, quantity: 1}]);
-                              }
-
-                              // Close modal
-                              setShowOptionModal(false);
-                              setSelectedBaseItem(null);
-                              setSelectedOptions({});
-                              setSelectedCartItem(null);
+                              // Don't add to cart or close modal - wait for Apply button
                             }
                           }}
                           className="w-full h-full flex flex-col items-center justify-center active:scale-95"
@@ -3116,7 +3208,9 @@ export default function CheckoutPage() {
                           </span>
                           {/* Only show price for single-select options */}
                           {!isMultiSelect && (
-                            <span className={`text-green-600 font-bold mt-1 ${
+                            <span className={`font-bold mt-1 ${
+                              isSelected ? 'text-blue-600' : 'text-green-600'
+                            } ${
                               optionCount > 12 ? 'text-xs' : optionCount > 9 ? 'text-sm' : 'text-base'
                             }`}>
                               ${price?.toFixed(2)}
@@ -3124,7 +3218,7 @@ export default function CheckoutPage() {
                           )}
                           {/* Show quantity for selected multi-select options */}
                           {isMultiSelect && isSelected && (
-                            <span className="text-black font-bold text-lg mt-1">{quantity}x</span>
+                            <span className="text-blue-600 font-bold text-lg mt-1">{quantity}x</span>
                           )}
                         </button>
                         {/* Minus button outside of main button for multi-select */}
@@ -3239,6 +3333,130 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   )}
+
+                  {/* Bottom Buttons - Combo and Customize */}
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t">
+                    {/* Combo Button - Bottom Left */}
+                    <button
+                      onClick={() => setOptionModalComboSelected(!optionModalComboSelected)}
+                      className={`px-5 py-3 rounded-lg font-medium text-lg transition-colors ${
+                        optionModalComboSelected
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-orange-600 text-white hover:bg-orange-700'
+                      }`}
+                    >
+                      {optionModalComboSelected ? '✓ Combo Added' : '+ Combo $4.00'}
+                    </button>
+
+                    {/* Customize Button - Bottom Right */}
+                    <button
+                      onClick={() => {
+                        // Build the item based on current selection WITHOUT adding to cart
+                        const config = optionConfigs[selectedBaseItem.optionType];
+                        let itemToCustomize: any = null;
+
+                        if (config?.multiSelect) {
+                          // Multi-select handling
+                          const selectedIngredients = Object.keys(multiSelectOptions).filter(key => multiSelectOptions[key] > 0);
+                          let fullName = selectedBaseItem.name;
+                          let finalPrice = selectedBaseItem.basePrice || selectedBaseItem.price || 0;
+
+                          if (selectedIngredients.length > 0) {
+                            const totalSelections = Object.values(multiSelectOptions).reduce((sum, count) => sum + count, 0);
+                            const extraSelections = Math.max(0, totalSelections - (config.maxFree || 0));
+                            const extraCharge = extraSelections * (config.extraCharge || 0);
+                            finalPrice += extraCharge;
+
+                            if (selectedBaseItem.selectedSize) {
+                              fullName = `${fullName} (${selectedBaseItem.selectedSize}, ${selectedIngredients.join(', ')})`;
+                            } else {
+                              fullName = `${fullName} (${selectedIngredients.join(', ')})`;
+                            }
+                          } else {
+                            // No ingredients selected yet, but still allow customization
+                            if (selectedBaseItem.selectedSize) {
+                              fullName = `${fullName} (${selectedBaseItem.selectedSize})`;
+                            }
+                          }
+
+                          const modifiers = optionModalComboSelected
+                            ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
+                            : [];
+
+                          itemToCustomize = {
+                            name: fullName,
+                            price: finalPrice,
+                            quantity: optionModalQuantity,
+                            modifiers: [...modifiers],
+                            isCustomizing: true,
+                            baseSelection: {
+                              baseItem: selectedBaseItem,
+                              selectedOptions: {...selectedOptions},
+                              multiSelectOptions: {...multiSelectOptions},
+                              comboSelected: optionModalComboSelected,
+                              quantity: optionModalQuantity
+                            }
+                          };
+                        } else {
+                          // Single select handling - allow customization even without selection
+                          const option = selectedOptions[selectedBaseItem.optionType];
+                          let fullName = selectedBaseItem.name;
+                          let finalPrice = selectedBaseItem.price || 0;
+
+                          if (option && selectedBaseItem.prices) {
+                            finalPrice = selectedBaseItem.prices[option.toLowerCase()] || selectedBaseItem.prices[option] || selectedBaseItem.price;
+                          }
+
+                          if (option) {
+                            fullName = `${selectedBaseItem.name} (${option})`;
+                          } else {
+                            // No option selected, use default
+                            fullName = `${selectedBaseItem.name}`;
+                            // Use first available price if prices object exists
+                            if (selectedBaseItem.prices) {
+                              const firstPrice = Object.values(selectedBaseItem.prices)[0];
+                              finalPrice = typeof firstPrice === 'number' ? firstPrice : selectedBaseItem.price || 0;
+                            }
+                          }
+
+                          const modifiers = optionModalComboSelected
+                            ? [{name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1}]
+                            : [];
+
+                          itemToCustomize = {
+                            name: fullName,
+                            price: finalPrice,
+                            quantity: optionModalQuantity,
+                            modifiers: [...modifiers],
+                            isCustomizing: true,
+                            baseSelection: {
+                              baseItem: selectedBaseItem,
+                              selectedOptions: {...selectedOptions},
+                              multiSelectOptions: {...multiSelectOptions},
+                              comboSelected: optionModalComboSelected,
+                              quantity: optionModalQuantity
+                            }
+                          };
+                        }
+
+                        if (itemToCustomize) {
+                          // Open modifier modal with the item to customize
+                          setSelectedCartItem(itemToCustomize);
+                          const modifierQuantities: {[key: string]: number} = {};
+                          itemToCustomize.modifiers?.forEach((mod: any) => {
+                            modifierQuantities[mod.name] = (modifierQuantities[mod.name] || 0) + 1;
+                          });
+                          setSelectedModifiers(modifierQuantities);
+                          setComboSelected(optionModalComboSelected);
+                          setShowModifierModal(true);
+                          // Keep option modal open in the background
+                        }
+                      }}
+                      className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 font-medium text-lg"
+                    >
+                      Customize →
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -3251,6 +3469,7 @@ export default function CheckoutPage() {
                        setShowModifierModal(false);
                        setSelectedCartItem(null);
                        setSelectedModifiers({});
+                       setComboSelected(false);
                      }
                    }}>
                 <div className="bg-white rounded-2xl shadow-2xl p-3 max-w-[95vw] h-[95vh] w-full mx-2 flex flex-col"
@@ -3261,6 +3480,7 @@ export default function CheckoutPage() {
                         setShowModifierModal(false);
                         setSelectedCartItem(null);
                         setSelectedModifiers({});
+                        setComboSelected(false);
                       }}
                       className="text-gray-600 hover:text-gray-800 font-medium text-base px-3 py-1"
                     >
@@ -3272,6 +3492,11 @@ export default function CheckoutPage() {
                         const updatedModifiers = Object.entries(selectedModifiers)
                           .filter(([_, quantity]) => quantity > 0)
                           .flatMap(([name, quantity]) => {
+                            // Check if this is a combo modifier
+                            if (name === 'Combo (Drink & Side)') {
+                              return Array(quantity).fill({name: 'Combo (Drink & Side)', price: comboUpcharge, quantity: 1});
+                            }
+
                             // Check if this is a custom add-on
                             if (name.startsWith('Custom Add-On - $')) {
                               const priceMatch = name.match(/\$(\d+\.?\d*)/);
@@ -3300,6 +3525,7 @@ export default function CheckoutPage() {
                         setShowModifierModal(false);
                         setSelectedCartItem(null);
                         setSelectedModifiers({});
+                        setComboSelected(false);
                       }}
                       className="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 font-medium text-base"
                     >
@@ -3314,50 +3540,30 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-3 mb-3 flex-shrink-0">
                     <button
                       onClick={() => {
-                        // Add combo as a separate line item with its own price
-                        const comboName = `  → Combo for ${selectedCartItem?.name || ''}`;
+                        // Toggle combo selection
+                        setComboSelected(!comboSelected);
 
-                        // Check if combo already exists for this item
-                        const existingCombo = foodCart.find(cartItem => cartItem.name === comboName);
-                        if (existingCombo) {
-                          // Increase quantity if combo already exists
-                          setFoodCart(foodCart.map(cartItem =>
-                            cartItem.name === comboName
-                              ? {...cartItem, quantity: cartItem.quantity + 1}
-                              : cartItem
-                          ));
+                        // Add or remove combo modifier
+                        if (!comboSelected) {
+                          setSelectedModifiers(prev => ({
+                            ...prev,
+                            'Combo (Drink & Side)': 1
+                          }));
                         } else {
-                          // Add combo as new line item with just the upcharge price
-                          // Find the index of the original item to insert combo after it
-                          const originalIndex = foodCart.findIndex(item => item === selectedCartItem);
-                          const newFoodCart = [...foodCart];
-                          const comboItem = {
-                            name: comboName,
-                            price: comboUpcharge,
-                            quantity: 1,
-                            isCombo: true,
-                            parentItem: selectedCartItem?.name
-                          };
-
-                          if (originalIndex !== -1) {
-                            // Insert combo right after the original item
-                            newFoodCart.splice(originalIndex + 1, 0, comboItem);
-                          } else {
-                            // If original item not found, add to end
-                            newFoodCart.push(comboItem);
-                          }
-                          setFoodCart(newFoodCart);
+                          setSelectedModifiers(prev => {
+                            const newModifiers = {...prev};
+                            delete newModifiers['Combo (Drink & Side)'];
+                            return newModifiers;
+                          });
                         }
-
-                        setShowModifierModal(false);
-                        setSelectedCartItem(null);
-                        setSelectedModifiers({});
-                        setMessage(`✓ Added Combo`);
-                        setTimeout(() => setMessage(''), 3000);
                       }}
-                      className="px-4 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm"
+                      className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-colors ${
+                        comboSelected
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-orange-600 text-white hover:bg-orange-700'
+                      }`}
                     >
-                      Add Combo +$4.00
+                      {comboSelected ? '✓ Combo Added' : 'Add Combo +$4.00'}
                     </button>
 
                     <button
@@ -3456,6 +3662,73 @@ export default function CheckoutPage() {
                         );
                       })}
                   </div>
+
+                  {/* Apply button for customizing items */}
+                  {(selectedCartItem as any)?.isCustomizing && (
+                    <div className="flex gap-2 p-3 border-t bg-gray-50">
+                      <button
+                        onClick={() => {
+                          // Apply customizations and add to cart
+                          const item: any = selectedCartItem;
+                          if (item && item.baseSelection) {
+                            const baseSelection = item.baseSelection;
+
+                            // Build the final items with modifiers
+                            const newItems = [];
+                            for (let i = 0; i < baseSelection.quantity; i++) {
+                              // Build modifiers array from selectedModifiers
+                              const modifiers: any[] = [];
+                              Object.entries(selectedModifiers).forEach(([name, count]) => {
+                                for (let j = 0; j < count; j++) {
+                                  const modConfig = modifierConfigs[getModifierType(item.name) as keyof typeof modifierConfigs];
+                                  const modifierDef = modConfig?.find(m => m.name === name);
+                                  const price = modifierDef?.price || (name.startsWith('Custom Add-On - $') ? parseFloat(name.match(/\$(\d+\.?\d*)/)?.[1] || '0') : 0);
+                                  modifiers.push({ name, price, quantity: 1 });
+                                }
+                              });
+
+                              const newItem = {
+                                name: item.name,
+                                price: item.price,
+                                quantity: 1,
+                                modifiers: modifiers
+                              };
+                              newItems.push(newItem);
+                            }
+
+                            // Add all items to cart
+                            setFoodCart([...foodCart, ...newItems]);
+
+                            // Close both modals
+                            setShowModifierModal(false);
+                            setShowOptionModal(false);
+                            setSelectedBaseItem(null);
+                            setSelectedOptions({});
+                            setMultiSelectOptions({});
+                            setSelectedCartItem(null);
+                            setSelectedModifiers({});
+                            setComboSelected(false);
+                            setOptionModalQuantity(1);
+                            setOptionModalComboSelected(false);
+                          }
+                        }}
+                        className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-semibold text-lg transition-colors"
+                      >
+                        Apply & Add to Cart
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowModifierModal(false);
+                          setSelectedCartItem(null);
+                          setSelectedModifiers({});
+                          setComboSelected(false);
+                        }}
+                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -3609,9 +3882,9 @@ export default function CheckoutPage() {
 
                     {/* New Food Items */}
                     {foodCart.length > 0 && (
-                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3">
-                        <h4 className="font-semibold text-sm text-gray-600 mb-2">Adding to Cart:</h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-2">
+                        <h4 className="font-semibold text-sm text-gray-600 mb-1">Adding to Cart:</h4>
+                        <div className="max-h-48 overflow-y-auto">
                           {[...foodCart].reverse().map((item, index) => {
                             const modifierTotal = item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
                             const itemPrice = item.price || 0; // Handle undefined price
@@ -3619,122 +3892,140 @@ export default function CheckoutPage() {
                               ? (itemPrice * (item.weight || 0))
                               : (itemPrice * item.quantity);
                             const totalPrice = basePrice + (modifierTotal * (item.quantity || 1));
+                            // Alternating colors for better distinction
+                            const bgColor = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
                             return (
-                              <div key={index} className="flex flex-col space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-black text-sm truncate pr-2 flex-1">
-                                    {item.isWeightBased ? `${item.name} (${item.weight} lbs)` : item.name}
-                                  </span>
-                                  {!item.isWeightBased ? (
-                                    <div className="flex items-center gap-1 mr-2">
-                                      <button
-                                        onClick={() => handleFoodItemDecrease(item)}
-                                        className="w-5 h-5 rounded-full bg-white border border-gray-300 text-black hover:bg-gray-100 flex items-center justify-center text-xs"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="w-6 text-center text-xs font-semibold text-black">{item.quantity}</span>
-                                      <button
-                                        onClick={() => handleFoodItemClick(item)}
-                                        className="w-5 h-5 rounded-full bg-white border border-gray-300 text-black hover:bg-gray-100 flex items-center justify-center text-xs"
-                                      >
-                                        +
-                                      </button>
+                              <div
+                                key={index}
+                                className={`${bgColor} hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-200 last:border-b-0`}
+                                onClick={() => {
+                                  if (!item.isWeightBased) {
+                                    // Open customize modal for the entire item
+                                    setSelectedCartItem(item);
+                                    const modifierQuantities: {[key: string]: number} = {};
+                                    let hasCombo = false;
+                                    item.modifiers?.forEach(mod => {
+                                      modifierQuantities[mod.name] = (modifierQuantities[mod.name] || 0) + 1;
+                                      if (mod.name === 'Combo (Drink & Side)') {
+                                        hasCombo = true;
+                                      }
+                                    });
+                                    setSelectedModifiers(modifierQuantities);
+                                    setComboSelected(hasCombo);
+                                    setShowModifierModal(true);
+                                  }
+                                }}
+                              >
+                                <div className="p-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center flex-1 pr-2">
+                                      <span className="text-black text-sm font-medium truncate">
+                                        {item.isWeightBased ? `${item.name} (${item.weight} lbs)` : `${item.quantity}x ${item.name}`}
+                                      </span>
+                                      {!item.isWeightBased && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Check if this is a Create Your Own Juice item
+                                            if (item.name.includes('Create Your Own Juice')) {
+                                              // Parse the juice name to extract size and ingredients
+                                              const match = item.name.match(/Create Your Own Juice \((Large|Small)(?:, (.+))?\)/);
+                                              if (match) {
+                                                const size = match[1];
+                                                const ingredientsStr = match[2] || '';
+                                                const ingredients = ingredientsStr ? ingredientsStr.split(', ') : [];
+
+                                                // Set up the ingredient selection modal
+                                                const ingredientOptionType = size.toLowerCase() === 'small' ? 'juice-custom-small' : 'juice-custom-large';
+                                                const basePrice = size.toLowerCase() === 'small' ? 6.99 : 7.99;
+
+                                                // Pre-populate the multi-select options with current ingredients
+                                                const preselectedIngredients: {[key: string]: number} = {};
+                                                ingredients.forEach(ingredient => {
+                                                  preselectedIngredients[ingredient] = 1;
+                                                });
+
+                                                setSelectedBaseItem({
+                                                  name: 'Create Your Own Juice',
+                                                  prices: {small: 6.99, large: 7.99},
+                                                  requiresOptions: true,
+                                                  optionType: ingredientOptionType,
+                                                  selectedSize: size,
+                                                  basePrice: basePrice
+                                                });
+                                                setMultiSelectOptions(preselectedIngredients);
+                                                setSelectedCartItem(item); // Keep track of which cart item we're editing
+                                                setShowOptionModal(true);
+                                                return;
+                                              }
+                                            }
+
+                                            // For all other items, use the normal modifier flow
+                                            setSelectedCartItem(item);
+                                            const modifierQuantities: {[key: string]: number} = {};
+                                            let hasCombo = false;
+                                            item.modifiers?.forEach(mod => {
+                                              modifierQuantities[mod.name] = (modifierQuantities[mod.name] || 0) + 1;
+                                              if (mod.name === 'Combo (Drink & Side)') {
+                                                hasCombo = true;
+                                              }
+                                            });
+                                            setSelectedModifiers(modifierQuantities);
+                                            setComboSelected(hasCombo);
+                                            setShowModifierModal(true);
+                                          }}
+                                          className="ml-2 text-gray-400 hover:text-blue-600 transition-colors"
+                                          title="Edit modifiers"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                          </svg>
+                                        </button>
+                                      )}
                                     </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2 mr-2">
+                                    {item.isWeightBased && (
                                       <button
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           // Set up for editing this specific food cart item's weight
                                           setSelectedWeightItem({ name: item.name, price: item.price });
                                           setWeightInput(item.weight?.toString() || '');
                                           setShowWeightModal(true);
                                         }}
-                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium mr-2"
                                       >
                                         Edit Weight
                                       </button>
+                                    )}
+                                    <span className="text-black font-bold text-sm">${totalPrice.toFixed(2)}</span>
+                                  </div>
+                                  {item.modifiers && item.modifiers.length > 0 && (
+                                    <div className="pl-4 mt-1">
+                                      {(() => {
+                                        // Group modifiers by name and count
+                                        const modifierCounts: {[key: string]: {count: number, price: number}} = {};
+                                        item.modifiers.forEach(mod => {
+                                          if (!modifierCounts[mod.name]) {
+                                            modifierCounts[mod.name] = {count: 0, price: mod.price};
+                                          }
+                                          modifierCounts[mod.name].count++;
+                                        });
+
+                                        return Object.entries(modifierCounts).map(([name, data]) => (
+                                          <div key={name} className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-600">
+                                              → {data.count > 1 ? `${data.count}x ` : ''}{name}
+                                            </span>
+                                            <span className="text-xs font-semibold text-gray-700">
+                                              +${(data.price * data.count).toFixed(2)}
+                                            </span>
+                                          </div>
+                                        ));
+                                      })()}
                                     </div>
                                   )}
-                                  <span className="text-black font-bold text-sm">${totalPrice.toFixed(2)}</span>
                                 </div>
-                                {item.modifiers && item.modifiers.length > 0 && (
-                                  <div className="pl-4 space-y-1 mt-1">
-                                    {(() => {
-                                      // Group modifiers by name and count
-                                      const modifierCounts: {[key: string]: {count: number, price: number}} = {};
-                                      item.modifiers.forEach(mod => {
-                                        if (!modifierCounts[mod.name]) {
-                                          modifierCounts[mod.name] = {count: 0, price: mod.price};
-                                        }
-                                        modifierCounts[mod.name].count++;
-                                      });
-
-                                      return Object.entries(modifierCounts).map(([name, data]) => (
-                                        <div key={name} className="flex justify-between items-center">
-                                          <span className="text-xs text-gray-600">
-                                            → {data.count > 1 ? `${data.count}x ` : ''}{name}
-                                          </span>
-                                          <span className="text-xs font-semibold text-black">
-                                            ${(data.price * data.count).toFixed(2)}
-                                          </span>
-                                        </div>
-                                      ));
-                                    })()}
-                                  </div>
-                                )}
-                                {!item.isWeightBased && (
-                                  <button
-                                    onClick={() => {
-                                      // Check if this is a Create Your Own Juice item
-                                      if (item.name.includes('Create Your Own Juice')) {
-                                        // Parse the juice name to extract size and ingredients
-                                        const match = item.name.match(/Create Your Own Juice \((Large|Small)(?:, (.+))?\)/);
-                                        if (match) {
-                                          const size = match[1];
-                                          const ingredientsStr = match[2] || '';
-                                          const ingredients = ingredientsStr ? ingredientsStr.split(', ') : [];
-
-                                          // Set up the ingredient selection modal
-                                          const ingredientOptionType = size.toLowerCase() === 'small' ? 'juice-custom-small' : 'juice-custom-large';
-                                          const basePrice = size.toLowerCase() === 'small' ? 6.99 : 7.99;
-
-                                          // Pre-populate the multi-select options with current ingredients
-                                          const preselectedIngredients: {[key: string]: number} = {};
-                                          ingredients.forEach(ingredient => {
-                                            preselectedIngredients[ingredient] = 1;
-                                          });
-
-                                          setSelectedBaseItem({
-                                            name: 'Create Your Own Juice',
-                                            prices: {small: 6.99, large: 7.99},
-                                            requiresOptions: true,
-                                            optionType: ingredientOptionType,
-                                            selectedSize: size,
-                                            basePrice: basePrice
-                                          });
-                                          setMultiSelectOptions(preselectedIngredients);
-                                          setSelectedCartItem(item); // Keep track of which cart item we're editing
-                                          setShowOptionModal(true);
-                                          return;
-                                        }
-                                      }
-
-                                      // For all other items, use the normal modifier flow
-                                      setSelectedCartItem(item);
-                                      const modifierQuantities: {[key: string]: number} = {};
-                                      item.modifiers?.forEach(mod => {
-                                        modifierQuantities[mod.name] = (modifierQuantities[mod.name] || 0) + 1;
-                                      });
-                                      setSelectedModifiers(modifierQuantities);
-                                      setShowModifierModal(true);
-                                    }}
-                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium self-start pl-2"
-                                  >
-                                    Customize
-                                  </button>
-                                )}
                               </div>
                             );
                           })}
