@@ -112,10 +112,10 @@ export default function StripeConnectOnboardingQR({ storeId }: StripeConnectOnbo
 
       if (qrCanvasRef.current) {
         await QRCode.toCanvas(qrCanvasRef.current, secureUrl, {
-          width: 200,
-          margin: 2,
+          width: 500,
+          margin: 4,
           color: {
-            dark: '#1F2937',
+            dark: '#000000',
             light: '#FFFFFF'
           }
         });
