@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Keyboard, Package, X, Plus, ShoppingCart } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
-import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 import StripeTerminal from '@/components/StripeTerminal';
 import MobilePayment from '@/components/MobilePayment';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -50,7 +49,6 @@ export default function CheckoutPage() {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showUpcNumpad, setShowUpcNumpad] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -92,13 +90,10 @@ export default function CheckoutPage() {
   const [newProductCost, setNewProductCost] = useState('');
   const [newProductCostDisplay, setNewProductCostDisplay] = useState('');
   const [showManualKeyIn, setShowManualKeyIn] = useState(false);
-  const [showNewProductNameKeyboard, setShowNewProductNameKeyboard] = useState(false);
   const [showNewProductPriceNumpad, setShowNewProductPriceNumpad] = useState(false);
   const [showNewProductCostNumpad, setShowNewProductCostNumpad] = useState(false);
-  const [showNewSupplierKeyboard, setShowNewSupplierKeyboard] = useState(false);
   const [manualItemName, setManualItemName] = useState('');
   const [manualItemPrice, setManualItemPrice] = useState('');
-  const [showManualNameKeyboard, setShowManualNameKeyboard] = useState(false);
   const [showManualPriceNumpad, setShowManualPriceNumpad] = useState(false);
   const [showKeyIn, setShowKeyIn] = useState(false);
   const [keyInAmount, setKeyInAmount] = useState('');
@@ -2139,12 +2134,13 @@ export default function CheckoutPage() {
               </div>
               <div className="mb-3">
                 <label className="block text-sm font-medium text-black mb-1">Product Name *</label>
-                <div
-                  onClick={() => setShowNewProductNameKeyboard(true)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
-                >
-                  <span className="text-black">{newProductName || <span className="text-gray-400">Tap to enter product name</span>}</span>
-                </div>
+                <input
+                  type="text"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  placeholder="Enter product name"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -2172,12 +2168,13 @@ export default function CheckoutPage() {
                 <label className="block text-sm font-medium text-black mb-1">Supplier/Source *</label>
                 {showNewSupplierInput ? (
                   <div className="flex gap-2">
-                    <div
-                      onClick={() => setShowNewSupplierKeyboard(true)}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
-                    >
-                      <span className="text-black">{newSupplierName || <span className="text-gray-400">Tap to enter supplier name</span>}</span>
-                    </div>
+                    <input
+                      type="text"
+                      value={newSupplierName}
+                      onChange={(e) => setNewSupplierName(e.target.value)}
+                      placeholder="Enter supplier name"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                    />
                     <button
                       type="button"
                       onClick={async () => {
@@ -2322,12 +2319,13 @@ export default function CheckoutPage() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-black mb-1">Item Name *</label>
-              <div
-                onClick={() => setShowManualNameKeyboard(true)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
-              >
-                <span className="text-black">{manualItemName || <span className="text-gray-400">Tap to enter item name</span>}</span>
-              </div>
+              <input
+                type="text"
+                value={manualItemName}
+                onChange={(e) => setManualItemName(e.target.value)}
+                placeholder="Enter item name"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+              />
             </div>
 
             <div className="mb-6">
@@ -2370,16 +2368,6 @@ export default function CheckoutPage() {
       )}
 
       {/* On-Screen Keyboards for New Product Form */}
-      {showNewProductNameKeyboard && (
-        <OnScreenKeyboard
-          value={newProductName}
-          onChange={setNewProductName}
-          onClose={() => setShowNewProductNameKeyboard(false)}
-          onEnter={() => setShowNewProductNameKeyboard(false)}
-          title="Enter Product Name"
-          type="text"
-        />
-      )}
 
       {showNewProductPriceNumpad && (
         <OnScreenNumpad
@@ -2425,28 +2413,7 @@ export default function CheckoutPage() {
         />
       )}
 
-      {showNewSupplierKeyboard && (
-        <OnScreenKeyboard
-          value={newSupplierName}
-          onChange={setNewSupplierName}
-          onClose={() => setShowNewSupplierKeyboard(false)}
-          onEnter={() => setShowNewSupplierKeyboard(false)}
-          title="Enter Supplier Name"
-          type="text"
-        />
-      )}
 
-      {/* On-Screen Keyboard for Manual Item Name */}
-      {showManualNameKeyboard && (
-        <OnScreenKeyboard
-          value={manualItemName}
-          onChange={setManualItemName}
-          onClose={() => setShowManualNameKeyboard(false)}
-          onEnter={() => setShowManualNameKeyboard(false)}
-          title="Enter Item Name"
-          type="text"
-        />
-      )}
 
       {/* On-Screen Numpad for Manual Item Price */}
       {showManualPriceNumpad && (
@@ -2502,10 +2469,8 @@ export default function CheckoutPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={() => setShowSearchKeyboard(true)}
                 placeholder="Type product name..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer"
-                readOnly
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -2533,7 +2498,6 @@ export default function CheckoutPage() {
                           // In price check mode, show price
                           setPriceCheckProduct(product);
                           setShowSearchModal(false);
-                          setShowSearchKeyboard(false);
                           setSearchQuery('');
                           setSearchResults([]);
                         } else {
@@ -2556,7 +2520,6 @@ export default function CheckoutPage() {
 
                           // Close modal and reset search
                           setShowSearchModal(false);
-                          setShowSearchKeyboard(false);
                           setSearchQuery('');
                           setSearchResults([]);
                         }
@@ -2583,17 +2546,6 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* On-Screen Keyboard for Search Input */}
-      {showSearchKeyboard && (
-        <OnScreenKeyboard
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onClose={() => setShowSearchKeyboard(false)}
-          onEnter={() => setShowSearchKeyboard(false)}
-          title="Search Products"
-          type="text"
-        />
-      )}
 
       {/* On-Screen Numpad for Key in Amount */}
       {showKeyInNumpad && (
@@ -2846,12 +2798,13 @@ export default function CheckoutPage() {
                 </div>
                 <div className="mb-3">
                   <label className="block text-xs text-black mb-1">Item Name *</label>
-                  <div
-                    onClick={() => setShowManualNameKeyboard(true)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-gray-50 cursor-pointer hover:bg-gray-100"
-                  >
-                    <span className="text-black">{manualItemName || <span className="text-gray-400">Tap to enter item name</span>}</span>
-                  </div>
+                  <input
+                    type="text"
+                    value={manualItemName}
+                    onChange={(e) => setManualItemName(e.target.value)}
+                    placeholder="Enter item name"
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm bg-white focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
                 </div>
                 <div className="mb-3">
                   <label className="block text-xs text-black mb-1">Price *</label>
@@ -3241,6 +3194,22 @@ export default function CheckoutPage() {
                         // Handle Apply - add item with selected options
                         const config = optionConfigs[selectedBaseItem.optionType];
 
+                        // Validate that required options are selected
+                        if (config?.multiSelect) {
+                          // For multi-select, check if at least one option is selected
+                          const selectedIngredients = Object.keys(multiSelectOptions).filter(key => multiSelectOptions[key] > 0);
+                          if (selectedIngredients.length === 0) {
+                            alert('Please select at least one ingredient before applying.');
+                            return;
+                          }
+                        } else {
+                          // For single-select, check if an option is selected
+                          if (!selectedOptions[selectedBaseItem.optionType]) {
+                            alert(`Please select a ${selectedBaseItem.optionType.toLowerCase()} option before applying.`);
+                            return;
+                          }
+                        }
+
                         if (config?.multiSelect) {
                           // Multi-select handling (for ingredients)
                           const selectedIngredients = Object.keys(multiSelectOptions).filter(key => multiSelectOptions[key] > 0);
@@ -3372,7 +3341,15 @@ export default function CheckoutPage() {
                         setOptionModalQuantity(1);
                         setOptionModalComboSelected(false);
                       }}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        // Check if option is selected
+                        (optionConfigs[selectedBaseItem.optionType]?.multiSelect
+                          ? Object.keys(multiSelectOptions).filter(key => multiSelectOptions[key] > 0).length > 0
+                          : selectedOptions[selectedBaseItem.optionType]
+                        )
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                     >
                       Apply →
                     </button>

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
-import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
 
 interface Product {
@@ -82,22 +81,15 @@ export default function InventoryPage() {
   const [showReconcileNumpad, setShowReconcileNumpad] = useState(false);
 
   // On-screen keyboard states
-  const [showNameKeyboard, setShowNameKeyboard] = useState(false);
   const [showPriceNumpad, setShowPriceNumpad] = useState(false);
   const [showCostNumpad, setShowCostNumpad] = useState(false);
   const [showQuantityNumpad, setShowQuantityNumpad] = useState(false);
   const [activeInputField, setActiveInputField] = useState<'name' | 'price' | 'cost' | 'quantity' | 'reconcile' | null>(null);
   // Edit mode on-screen inputs
-  const [showEditNameKeyboard, setShowEditNameKeyboard] = useState(false);
   const [showEditPriceNumpad, setShowEditPriceNumpad] = useState(false);
   const [showEditCostNumpad, setShowEditCostNumpad] = useState(false);
   // Search field on-screen input
-  const [showSearchKeyboard, setShowSearchKeyboard] = useState(false);
   // Supplier fields on-screen inputs
-  const [showSupplierNameKeyboard, setShowSupplierNameKeyboard] = useState(false);
-  const [showSupplierContactKeyboard, setShowSupplierContactKeyboard] = useState(false);
-  const [showSupplierPhoneKeyboard, setShowSupplierPhoneKeyboard] = useState(false);
-  const [showSupplierEmailKeyboard, setShowSupplierEmailKeyboard] = useState(false);
 
   // Duplicate management states
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -1142,12 +1134,13 @@ export default function InventoryPage() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <div
-              onClick={() => setShowSearchKeyboard(true)}
-              className="w-full p-3 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
-            >
-              <span className="text-black">{searchTerm || <span className="text-gray-400">Tap to search by name or UPC</span>}</span>
-            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or UPC"
+              className="w-full p-3 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div className="bg-white rounded-lg shadow-md overflow-x-auto">
@@ -1529,16 +1522,13 @@ export default function InventoryPage() {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm text-black mb-1">Product Name</label>
-                        <div
-                          onClick={() => setShowEditNameKeyboard(true)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            setShowEditNameKeyboard(true);
-                          }}
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                        >
-                          <span className="text-black">{editName || <span className="text-gray-400">Tap to edit name</span>}</span>
-                        </div>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Enter product name"
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1788,16 +1778,6 @@ export default function InventoryPage() {
       )}
 
       {/* Edit Mode On-Screen Inputs */}
-      {showEditNameKeyboard && (
-        <OnScreenKeyboard
-          value={editName}
-          onChange={setEditName}
-          onClose={() => setShowEditNameKeyboard(false)}
-          onEnter={() => setShowEditNameKeyboard(false)}
-          title="Edit Product Name"
-          type="text"
-        />
-      )}
 
       {showEditPriceNumpad && (
         <OnScreenNumpad
@@ -2632,20 +2612,13 @@ export default function InventoryPage() {
                 <>
               <div className="mb-4">
                 <label className="block text-black mb-2">Product Name *</label>
-                <div
-                  onClick={() => {
-                    setActiveInputField('name');
-                    setShowNameKeyboard(true);
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    setActiveInputField('name');
-                    setShowNameKeyboard(true);
-                  }}
-                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                >
-                  <span className="text-black">{productName || <span className="text-gray-400">Tap to enter product name</span>}</span>
-                </div>
+                <input
+                  type="text"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="Enter product name"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -2715,46 +2688,34 @@ export default function InventoryPage() {
                   <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
                     <h4 className="font-semibold mb-3 text-black">Add New Supplier</h4>
                     <div className="space-y-3">
-                      <div
-                        onClick={() => setShowSupplierNameKeyboard(true)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setShowSupplierNameKeyboard(true);
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                      >
-                        <span className="text-black">{newSupplierName || <span className="text-gray-400">Tap to enter supplier name</span>}</span>
-                      </div>
-                      <div
-                        onClick={() => setShowSupplierContactKeyboard(true)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setShowSupplierContactKeyboard(true);
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                      >
-                        <span className="text-black">{newSupplierContact || <span className="text-gray-400">Tap to enter contact person</span>}</span>
-                      </div>
-                      <div
-                        onClick={() => setShowSupplierPhoneKeyboard(true)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setShowSupplierPhoneKeyboard(true);
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                      >
-                        <span className="text-black">{newSupplierPhone || <span className="text-gray-400">Tap to enter phone number</span>}</span>
-                      </div>
-                      <div
-                        onClick={() => setShowSupplierEmailKeyboard(true)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          setShowSupplierEmailKeyboard(true);
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded text-black bg-gray-50 cursor-pointer hover:bg-gray-100 touch-manipulation"
-                      >
-                        <span className="text-black">{newSupplierEmail || <span className="text-gray-400">Tap to enter email</span>}</span>
-                      </div>
+                      <input
+                        type="text"
+                        value={newSupplierName}
+                        onChange={(e) => setNewSupplierName(e.target.value)}
+                        placeholder="Enter supplier name"
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="text"
+                        value={newSupplierContact}
+                        onChange={(e) => setNewSupplierContact(e.target.value)}
+                        placeholder="Enter contact person"
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="tel"
+                        value={newSupplierPhone}
+                        onChange={(e) => setNewSupplierPhone(e.target.value)}
+                        placeholder="Enter phone number"
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="email"
+                        value={newSupplierEmail}
+                        onChange={(e) => setNewSupplierEmail(e.target.value)}
+                        placeholder="Enter email"
+                        className="w-full p-2 border border-gray-300 rounded text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                       <button
                         type="button"
                         onClick={handleAddSupplier}
@@ -2815,22 +2776,6 @@ export default function InventoryPage() {
       </div>
 
       {/* Modals for Add mode */}
-      {showNameKeyboard && (
-        <OnScreenKeyboard
-          value={productName}
-          onChange={setProductName}
-          onClose={() => {
-            setShowNameKeyboard(false);
-            setActiveInputField(null);
-          }}
-          onEnter={() => {
-            setShowNameKeyboard(false);
-            setActiveInputField(null);
-          }}
-          title="Enter Product Name"
-          type="text"
-        />
-      )}
 
       {showPriceNumpad && (
         <OnScreenNumpad
@@ -2890,49 +2835,9 @@ export default function InventoryPage() {
       )}
 
       {/* Supplier Field Keyboards */}
-      {showSupplierNameKeyboard && (
-        <OnScreenKeyboard
-          value={newSupplierName}
-          onChange={setNewSupplierName}
-          onClose={() => setShowSupplierNameKeyboard(false)}
-          onEnter={() => setShowSupplierNameKeyboard(false)}
-          title="Enter Supplier Name"
-          type="text"
-        />
-      )}
 
-      {showSupplierContactKeyboard && (
-        <OnScreenKeyboard
-          value={newSupplierContact}
-          onChange={setNewSupplierContact}
-          onClose={() => setShowSupplierContactKeyboard(false)}
-          onEnter={() => setShowSupplierContactKeyboard(false)}
-          title="Enter Contact Person"
-          type="text"
-        />
-      )}
 
-      {showSupplierPhoneKeyboard && (
-        <OnScreenKeyboard
-          value={newSupplierPhone}
-          onChange={setNewSupplierPhone}
-          onClose={() => setShowSupplierPhoneKeyboard(false)}
-          onEnter={() => setShowSupplierPhoneKeyboard(false)}
-          title="Enter Phone Number"
-          type="text"
-        />
-      )}
 
-      {showSupplierEmailKeyboard && (
-        <OnScreenKeyboard
-          value={newSupplierEmail}
-          onChange={setNewSupplierEmail}
-          onClose={() => setShowSupplierEmailKeyboard(false)}
-          onEnter={() => setShowSupplierEmailKeyboard(false)}
-          title="Enter Email"
-          type="email"
-        />
-      )}
       </>
     );
   }
@@ -2941,22 +2846,6 @@ export default function InventoryPage() {
   return (
     <>
       {/* On-Screen Keyboard for Product Name */}
-      {showNameKeyboard && (
-        <OnScreenKeyboard
-          value={productName}
-          onChange={setProductName}
-          onClose={() => {
-            setShowNameKeyboard(false);
-            setActiveInputField(null);
-          }}
-          onEnter={() => {
-            setShowNameKeyboard(false);
-            setActiveInputField(null);
-          }}
-          title="Enter Product Name"
-          type="text"
-        />
-      )}
 
       {/* On-Screen Numpad for Price */}
       {showPriceNumpad && (
@@ -3019,16 +2908,6 @@ export default function InventoryPage() {
       )}
 
       {/* Edit Mode On-Screen Inputs */}
-      {showEditNameKeyboard && (
-        <OnScreenKeyboard
-          value={editName}
-          onChange={setEditName}
-          onClose={() => setShowEditNameKeyboard(false)}
-          onEnter={() => setShowEditNameKeyboard(false)}
-          title="Edit Product Name"
-          type="text"
-        />
-      )}
 
       {showEditPriceNumpad && (
         <OnScreenNumpad
@@ -3054,16 +2933,6 @@ export default function InventoryPage() {
 
 
       {/* Search field on-screen input */}
-      {showSearchKeyboard && (
-        <OnScreenKeyboard
-          value={searchTerm}
-          onChange={setSearchTerm}
-          onClose={() => setShowSearchKeyboard(false)}
-          onEnter={() => setShowSearchKeyboard(false)}
-          title="Search Products"
-          type="text"
-        />
-      )}
     </>
   );
 }

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
-import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,8 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
-  const [showPasswordKeyboard, setShowPasswordKeyboard] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Check if already authenticated
@@ -109,30 +106,19 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div>
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-black mb-2" htmlFor="email">
               Email
             </label>
-            <div className="relative">
-              <div
-                onClick={() => setShowEmailKeyboard(true)}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
-              >
-                <span className="text-black">
-                  {email || <span className="text-gray-400">Tap to enter your email or use keyboard</span>}
-                </span>
-              </div>
-              {/* Hidden input for keyboard support */}
-              <input
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setShowEmailKeyboard(true)}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                placeholder=""
-              />
-            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              className="w-full p-3 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete="email"
+            />
           </div>
 
           <div className="mb-6">
@@ -140,38 +126,24 @@ export default function LoginPage() {
               Password
             </label>
             <div className="relative">
-              <div className="relative">
-                <div
-                  onClick={() => setShowPasswordKeyboard(true)}
-                  className="w-full p-3 pr-12 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100"
-                >
-                  <span className="text-black">
-                    {password ? (showPassword ? password : '•'.repeat(password.length)) : <span className="text-gray-400">Tap to enter your password or use keyboard</span>}
-                  </span>
-                </div>
-                {/* Hidden input for keyboard support */}
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setShowPasswordKeyboard(true)}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  placeholder=""
-                />
-              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full p-3 pr-12 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="current-password"
+              />
               {password && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPassword(!showPassword);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded transition-colors"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5 text-black" />
+                    <EyeOff className="w-5 h-5 text-gray-600" />
                   ) : (
-                    <Eye className="w-5 h-5 text-black" />
+                    <Eye className="w-5 h-5 text-gray-600" />
                   )}
                 </button>
               )}
@@ -179,48 +151,16 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-            }}
+            type="submit"
             className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
             disabled={loading || !email || !password}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
-        </div>
+        </form>
 
       </div>
 
-      {/* On-Screen Keyboard for Email */}
-      {showEmailKeyboard && (
-        <OnScreenKeyboard
-          value={email}
-          onChange={setEmail}
-          onClose={() => setShowEmailKeyboard(false)}
-          onEnter={() => setShowEmailKeyboard(false)}
-          title="Enter Email"
-          type="email"
-        />
-      )}
-
-      {/* On-Screen Keyboard for Password */}
-      {showPasswordKeyboard && (
-        <OnScreenKeyboard
-          value={password}
-          onChange={setPassword}
-          onClose={() => setShowPasswordKeyboard(false)}
-          onEnter={() => {
-            setShowPasswordKeyboard(false);
-            // Auto-submit on enter if both fields are filled
-            if (email && password) {
-              handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-            }
-          }}
-          title="Enter Password"
-          type="password"
-        />
-      )}
     </div>
   );
 }

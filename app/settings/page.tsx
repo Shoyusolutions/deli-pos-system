@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, DollarSign, Receipt, Shield, Database, CreditCard } from 'lucide-react';
 import OnScreenNumpad from '@/components/OnScreenNumpad';
-import OnScreenKeyboard from '@/components/OnScreenKeyboard';
 import StripeConnectOnboardingQR from '@/components/StripeConnectOnboardingQR';
 
 export default function SettingsPage() {
@@ -18,9 +17,6 @@ export default function SettingsPage() {
   // On-screen input states
   const [showTaxRateNumpad, setShowTaxRateNumpad] = useState(false);
   const [showCashDiscountNumpad, setShowCashDiscountNumpad] = useState(false);
-  const [showTaxNameKeyboard, setShowTaxNameKeyboard] = useState(false);
-  const [showReceiptHeaderKeyboard, setShowReceiptHeaderKeyboard] = useState(false);
-  const [showReceiptFooterKeyboard, setShowReceiptFooterKeyboard] = useState(false);
 
   useEffect(() => {
     const savedStoreId = localStorage.getItem('selectedStoreId');
@@ -219,12 +215,13 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-black mb-1">
                           Tax Name
                         </label>
-                        <div
-                          onClick={() => setShowTaxNameKeyboard(true)}
-                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100"
-                        >
-                          <span className="text-black">{settings.taxName || <span className="text-gray-400">Tap to enter tax name</span>}</span>
-                        </div>
+                        <input
+                          type="text"
+                          value={settings.taxName || ''}
+                          onChange={(e) => setSettings({ ...settings, taxName: e.target.value })}
+                          placeholder="Enter tax name"
+                          className="w-full p-2 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
 
                       <div>
@@ -299,24 +296,26 @@ export default function SettingsPage() {
                 <label className="block text-sm font-medium text-black mb-1">
                   Receipt Header
                 </label>
-                <div
-                  onClick={() => setShowReceiptHeaderKeyboard(true)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 min-h-[4rem]"
-                >
-                  <span className="text-black">{settings.receiptHeader || <span className="text-gray-400">Tap to enter receipt header</span>}</span>
-                </div>
+                <textarea
+                  value={settings.receiptHeader || ''}
+                  onChange={(e) => setSettings({ ...settings, receiptHeader: e.target.value })}
+                  placeholder="Enter receipt header"
+                  rows={3}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-black mb-1">
                   Receipt Footer
                 </label>
-                <div
-                  onClick={() => setShowReceiptFooterKeyboard(true)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-gray-50 cursor-pointer hover:bg-gray-100 min-h-[4rem]"
-                >
-                  <span className="text-black">{settings.receiptFooter || <span className="text-gray-400">Tap to enter receipt footer</span>}</span>
-                </div>
+                <textarea
+                  value={settings.receiptFooter || ''}
+                  onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
+                  placeholder="Enter receipt footer"
+                  rows={3}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
               </div>
 
               <div className="space-y-3">
@@ -392,38 +391,6 @@ export default function SettingsPage() {
         />
       )}
 
-      {showTaxNameKeyboard && (
-        <OnScreenKeyboard
-          value={settings.taxName || ''}
-          onChange={(value) => setSettings({ ...settings, taxName: value })}
-          onClose={() => setShowTaxNameKeyboard(false)}
-          onEnter={() => setShowTaxNameKeyboard(false)}
-          title="Enter Tax Name"
-          type="text"
-        />
-      )}
-
-      {showReceiptHeaderKeyboard && (
-        <OnScreenKeyboard
-          value={settings.receiptHeader || ''}
-          onChange={(value) => setSettings({ ...settings, receiptHeader: value })}
-          onClose={() => setShowReceiptHeaderKeyboard(false)}
-          onEnter={() => setShowReceiptHeaderKeyboard(false)}
-          title="Enter Receipt Header"
-          type="text"
-        />
-      )}
-
-      {showReceiptFooterKeyboard && (
-        <OnScreenKeyboard
-          value={settings.receiptFooter || ''}
-          onChange={(value) => setSettings({ ...settings, receiptFooter: value })}
-          onClose={() => setShowReceiptFooterKeyboard(false)}
-          onEnter={() => setShowReceiptFooterKeyboard(false)}
-          title="Enter Receipt Footer"
-          type="text"
-        />
-      )}
     </div>
   );
 }
