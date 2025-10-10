@@ -4294,18 +4294,7 @@ export default function CheckoutPage() {
                       <div className="mt-4 bg-gray-100 rounded-lg p-3">
                         <div className="flex justify-between font-bold text-lg text-black">
                           <span>Total:</span>
-                          <span>
-                            ${(
-                              cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0) +
-                              foodCart.reduce((sum, item) => {
-                                if (item.isWeightBased) {
-                                  return sum + (item.price * (item.weight || 0));
-                                } else {
-                                  return sum + (item.price * item.quantity);
-                                }
-                              }, 0)
-                            ).toFixed(2)}
-                          </span>
+                          <span>${getSubtotal().toFixed(2)}</span>
                         </div>
                       </div>
                     )}
